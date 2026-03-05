@@ -59,6 +59,11 @@
     .admin-only { display: none; }
     .admin-only.visible { display: block; }
     .mb { margin-bottom: 16px; }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; }
+    .modal-overlay.visible { display: flex; }
+    .modal-box { background: #fff; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+    .modal-box p { margin: 0 0 12px; line-height: 1.6; font-size: 14px; white-space: pre-line; }
+    .modal-close { display: block; width: 100%; padding: 12px; margin-top: 12px; border-radius: 8px; border: none; background: var(--line-green); color: #fff; font-weight: bold; cursor: pointer; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -88,10 +93,6 @@
             <option value="4">4人</option>
             <option value="5">5人</option>
             <option value="6">6人</option>
-            <option value="7">7人</option>
-            <option value="8">8人</option>
-            <option value="9">9人</option>
-            <option value="10">10人</option>
           </select>
           <div id="priceBreakdown"></div>
           <div id="totalPrice" class="total-price">総支払金額: ---</div>
@@ -99,6 +100,13 @@
         <button id="btnConfirm" class="btn btn-primary" disabled>宿泊を確定させる</button>
         <div id="confirmMessage" class="success-msg"></div>
         <div id="confirmError" class="error-msg"></div>
+      </div>
+      <div id="guestNoticeModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="guestNoticeTitle">
+        <div class="modal-box">
+          <p id="guestNoticeTitle"><strong>ご確認ください（4名以上の場合）</strong></p>
+          <p id="guestNoticeBody">セミダブルベットが3台です。&#10;最大6名まで宿泊可能ですが、大人6名だと狭いです。&#10;大人2名、お子様4名程度が好ましいです。&#10;&#10;宿泊人数、部屋の間取りなど、必ず確認をしてから宿泊予約をしてください。</p>
+          <button type="button" id="guestNoticeClose" class="modal-close">閉じる</button>
+        </div>
       </div>
       <div id="pageSettings" class="page">
         <div class="section-title">管理者設定（管理者のLINEでのみ表示）</div>
@@ -255,7 +263,17 @@
         document.getElementById('prevMonth').addEventListener('click', () => { currentMonth--; if (currentMonth < 1) { currentMonth = 12; currentYear--; } renderCalendar(); });
         document.getElementById('nextMonth').addEventListener('click', () => { currentMonth++; if (currentMonth > 12) { currentMonth = 1; currentYear++; } renderCalendar(); });
         document.getElementById('btnConfirm').addEventListener('click', doConfirmReservation);
-        document.getElementById('numGuests').addEventListener('change', updateTotal);
+        document.getElementById('numGuests').addEventListener('change', function() {
+          updateTotal();
+          const n = parseInt(document.getElementById('numGuests').value, 10) || 0;
+          if (n >= 4) document.getElementById('guestNoticeModal').classList.add('visible');
+        });
+        document.getElementById('guestNoticeClose').addEventListener('click', function() {
+          document.getElementById('guestNoticeModal').classList.remove('visible');
+        });
+        document.getElementById('guestNoticeModal').addEventListener('click', function(e) {
+          if (e.target === this) this.classList.remove('visible');
+        });
         document.getElementById('btnSaveSettings').addEventListener('click', saveAllSettings);
         document.getElementById('btnCloseMonth').addEventListener('click', doCloseMonth);
       }
