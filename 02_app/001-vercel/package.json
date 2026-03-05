@@ -1,7 +1,0 @@
-{
-  "name": "okinawa-airbnb",
-  "private": true,
-  "scripts": {
-    "build": "node build-config.js"
-  }
-}
