@@ -189,6 +189,41 @@ function getReservationsForMonth(year, month) {
   return result;
 }
 
+/**
+ * 指定月に1日でもかかる「確定」予約をすべて返す（管理者用・前月開始の予約も含む）
+ */
+function getReservationsOverlappingMonth(year, month) {
+  var sheet = getSheet(SHEET_NAMES.RESERVATIONS);
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var monthStart = new Date(year, month - 1, 1);
+  var monthEnd = new Date(year, month, 0);
+  var result = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][7] !== '確定') continue;
+    var checkInStr = String(data[i][2]).trim();
+    var checkOutStr = String(data[i][3]).trim();
+    if (!checkInStr || !checkOutStr) continue;
+    var cin = new Date(checkInStr);
+    var cout = new Date(checkOutStr);
+    if (isNaN(cin.getTime()) || isNaN(cout.getTime())) continue;
+    if (cout <= monthStart || cin > monthEnd) continue;
+    result.push({
+      reservationId: data[i][0],
+      guestLineUserId: data[i][1],
+      checkIn: data[i][2],
+      checkOut: data[i][3],
+      numberOfGuests: data[i][4],
+      amount: Number(data[i][5]) || 0,
+      cleaningFee: Number(data[i][6]) || 0,
+      status: data[i][7],
+      confirmedAt: data[i][8],
+      createdAt: data[i][9]
+    });
+  }
+  return result;
+}
+
 function getReservationsByGuest(guestLineUserId) {
   var sheet = getSheet(SHEET_NAMES.RESERVATIONS);
   if (!sheet) return [];
@@ -213,7 +248,7 @@ function getGuestDisplayName(lineUserId) {
 }
 
 function getReservationsForMonthWithDetails(year, month) {
-  var list = getReservationsForMonth(year, month);
+  var list = getReservationsOverlappingMonth(year, month);
   var result = [];
   for (var i = 0; i < list.length; i++) {
     var r = list[i];
@@ -225,5 +260,34 @@ function getReservationsForMonthWithDetails(year, month) {
       totalAmount: totalAmount
     });
   }
+  return result;
+}
+
+/**
+ * スプレッドシートの確定予約を全件取得（管理者用・過去・当月・未来の区別なし）
+ */
+function getAllReservationsWithDetails() {
+  var sheet = getSheet(SHEET_NAMES.RESERVATIONS);
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var result = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][7] !== '確定') continue;
+    var checkInStr = String(data[i][2]).trim();
+    var checkOutStr = String(data[i][3]).trim();
+    if (!checkInStr || !checkOutStr) continue;
+    var totalAmount = (Number(data[i][5]) || 0) + (Number(data[i][6]) || 0);
+    result.push({
+      guestDisplayName: getGuestDisplayName(data[i][1]) || '(不明)',
+      checkIn: data[i][2],
+      checkOut: data[i][3],
+      totalAmount: totalAmount
+    });
+  }
+  result.sort(function (a, b) {
+    var t1 = new Date(a.checkIn).getTime();
+    var t2 = new Date(b.checkIn).getTime();
+    return t1 - t2;
+  });
   return result;
 }

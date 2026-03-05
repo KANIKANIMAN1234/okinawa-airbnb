@@ -88,7 +88,7 @@
         </div>
         <div id="calendarGrid" class="calendar-grid"></div>
         <div id="adminReservationListWrap" class="admin-only mb" style="display:none;">
-          <div class="section-title">今月の予約一覧（管理者用）</div>
+          <div class="section-title">予約一覧（全件・管理者用）</div>
           <ul id="adminReservationList" class="admin-reservation-list"></ul>
         </div>
         <div class="summary-box">
@@ -341,10 +341,8 @@
 
       async function fetchAdminReservationDetails() {
         if (!isAdmin || !profile || !profile.userId) return;
-        const r = await callGAS('getMonthReservationDetails', {
-          lineUserId: profile.userId,
-          year: currentYear,
-          month: currentMonth
+        const r = await callGAS('getAllReservationDetails', {
+          lineUserId: profile.userId
         });
         adminReservationDetails = (r && r.status === 'success' && r.result && r.result.reservationDetails) ? r.result.reservationDetails : [];
       }

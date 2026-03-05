@@ -26,6 +26,8 @@ function handleApiAction(action, data) {
         return apiGetMyReservations(data);
       case 'getMonthReservationDetails':
         return apiGetMonthReservationDetails(data);
+      case 'getAllReservationDetails':
+        return apiGetAllReservationDetails(data);
       case 'closeMonth':
         return apiCloseMonth(data);
       default:
@@ -196,6 +198,16 @@ function apiGetMonthReservationDetails(data) {
   var month = data && data.month;
   if (year == null || month == null) return { status: 'success', result: { reservationDetails: [] } };
   var list = getReservationsForMonthWithDetails(parseInt(year, 10), parseInt(month, 10));
+  return { status: 'success', result: { reservationDetails: list } };
+}
+
+function apiGetAllReservationDetails(data) {
+  var lineUserId = data && data.lineUserId;
+  var adminId = getConfigValue('adminLineUserId');
+  if (!lineUserId || adminId !== lineUserId) {
+    return { status: 'error', message: '管理者のみ利用できます' };
+  }
+  var list = getAllReservationsWithDetails();
   return { status: 'success', result: { reservationDetails: list } };
 }
 
