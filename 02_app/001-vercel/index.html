@@ -86,6 +86,10 @@
           <span id="monthLabel">----年--月</span>
           <button type="button" id="nextMonth">翌月 →</button>
         </div>
+        <div id="debugWrap" class="mb" style="display:none; background:#fff3cd; padding:12px; border-radius:8px; font-size:12px; margin-bottom:12px; border:2px solid #ffc107;">
+          <strong>🔍 デバッグ情報</strong>
+          <div id="debugInfo"></div>
+        </div>
         <div id="calendarGrid" class="calendar-grid"></div>
         <div id="adminDebugWrap" class="admin-only mb" style="display:none; background:#fff3cd; padding:12px; border-radius:8px; font-size:12px; margin-bottom:12px;">
           <strong>デバッグ情報（管理者用）</strong>
@@ -254,6 +258,15 @@
         bindEvents();
       }
 
+      function showDebugInfo(msg) {
+        const wrap = document.getElementById('debugWrap');
+        const el = document.getElementById('debugInfo');
+        if (!wrap || !el) return;
+        wrap.style.display = 'block';
+        const now = new Date().toLocaleTimeString();
+        el.innerHTML += '<div>' + now + ' - ' + escapeHtml(msg) + '</div>';
+      }
+
       function updateDebugInfo(msg) {
         const el = document.getElementById('adminDebugInfo');
         if (!el) return;
@@ -275,8 +288,11 @@
         }).then(async (p) => {
           if (!p) return;
           profile = { userId: p.userId, displayName: p.displayName };
+          showDebugInfo('LIFF ログイン成功 - userId: ' + p.userId);
           const r = await callGAS('isAdmin', { lineUserId: p.userId });
+          showDebugInfo('isAdmin API レスポンス: ' + JSON.stringify(r));
           isAdmin = r && r.result && r.result.isAdmin === true;
+          showDebugInfo('管理者判定結果: isAdmin = ' + isAdmin);
           showApp();
         }).catch(err => {
           console.error(err);
