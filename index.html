@@ -582,10 +582,21 @@
           });
           if (r && r.status === 'success') {
             let msg = '予約が確定しました。';
+            showDebugInfo('予約確定 API レスポンス: ' + JSON.stringify(r.result));
             if (r.result && r.result.lineNotifyGuest === false) {
               msg += ' LINEへの御礼メッセージ送信に失敗しました。GASのスクリプトプロパティ（CHANNEL_ACCESS_TOKEN）と、公式アカウントの友だち追加をご確認ください。';
-            } else {
+              showDebugInfo('LINE通知（ゲスト）: 失敗');
+            } else if (r.result && r.result.lineNotifyGuest === true) {
               msg += ' LINEで御礼メッセージをお送りしています。';
+              showDebugInfo('LINE通知（ゲスト）: 成功');
+            } else {
+              msg += ' LINE通知の状態が不明です。';
+              showDebugInfo('LINE通知（ゲスト）: 不明（レスポンスに lineNotifyGuest が含まれていません）');
+            }
+            if (r.result && r.result.lineNotifyAdmin === false) {
+              showDebugInfo('LINE通知（管理者）: 失敗');
+            } else if (r.result && r.result.lineNotifyAdmin === true) {
+              showDebugInfo('LINE通知（管理者）: 成功');
             }
             document.getElementById('confirmMessage').textContent = msg;
             selectedCheckIn = null;
@@ -595,6 +606,7 @@
             renderCalendar();
           } else {
             document.getElementById('confirmError').textContent = r && r.message ? r.message : '予約に失敗しました。';
+            showDebugInfo('予約確定エラー: ' + (r && r.message ? r.message : '不明'));
           }
         } catch (e) {
           document.getElementById('confirmError').textContent = '通信エラーです。';
