@@ -345,16 +345,23 @@
           lineUserId: profile.userId
         });
         adminReservationDetails = (r && r.status === 'success' && r.result && r.result.reservationDetails) ? r.result.reservationDetails : [];
+        console.log('[管理者] 予約詳細取得:', adminReservationDetails.length + '件', adminReservationDetails);
       }
 
       function getReservationDetailForDate(key) {
         const keyStr = String(key).slice(0, 10);
+        console.log('[管理者] 日付 ' + keyStr + ' の予約詳細を検索中... adminReservationDetails:', adminReservationDetails.length + '件');
         for (let i = 0; i < adminReservationDetails.length; i++) {
           const r = adminReservationDetails[i];
           const cin = String(r.checkIn).slice(0, 10);
           const cout = String(r.checkOut).slice(0, 10);
-          if (keyStr >= cin && keyStr < cout) return r;
+          console.log('  予約' + i + ': checkIn=' + cin + ', checkOut=' + cout + ', 判定: ' + keyStr + ' >= ' + cin + ' && ' + keyStr + ' < ' + cout);
+          if (keyStr >= cin && keyStr < cout) {
+            console.log('  → 一致！', r);
+            return r;
+          }
         }
+        console.log('  → 該当なし');
         return null;
       }
 
@@ -437,6 +444,7 @@
           dayEl.dataset.date = key;
           if (blocked && isAdmin) {
             const detail = getReservationDetailForDate(key);
+            console.log('[管理者] ' + key + ' の予約詳細:', detail);
             if (detail) {
               const amount = typeof detail.totalAmount === 'number' ? detail.totalAmount.toLocaleString() : detail.totalAmount;
               dayEl.title = 'LINE名: ' + detail.guestDisplayName + ', 予約: ' + String(detail.checkIn).slice(0, 10) + '〜' + String(detail.checkOut).slice(0, 10) + ', 金額: ¥' + amount;
