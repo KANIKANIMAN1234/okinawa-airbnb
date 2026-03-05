@@ -46,8 +46,8 @@
     .cal-header { text-align: center; font-size: 11px; color: #666; padding: 4px; }
     .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 13px; cursor: pointer; }
     .cal-day.empty { visibility: hidden; }
-    .cal-day.blocked { background: #eee; color: #999; cursor: not-allowed; }
-    .cal-day.available { background: #e8f5e9; color: #2e7d32; }
+    .cal-day.blocked { background: #b0b0b0; color: #666; cursor: not-allowed; }
+    .cal-day.available { background: #b3e5fc; color: #01579b; }
     .cal-day.selected { background: var(--line-green); color: #fff; }
     .cal-day.checkin { background: var(--line-blue); color: #fff; }
     .cal-day.checkout { background: #ff9800; color: #fff; }
@@ -107,6 +107,10 @@
           <input type="text" id="driveFolderId" placeholder="1RkQ9GF9teR76ufQ4lUvra2Nx90S3cR-Q">
         </div>
         <div class="form-row">
+          <label>Airbnb iCal カレンダーURL（空き状況の取得元）</label>
+          <input type="url" id="airbnbIcalUrl" placeholder="https://www.airbnb.jp/calendar/ical/xxxxx.ics?t=xxxxx">
+        </div>
+        <div class="form-row">
           <label>一泊単価（円）</label>
           <input type="number" id="nightlyRate" placeholder="15000">
         </div>
@@ -146,6 +150,22 @@
         <div class="form-row">
           <label>宿泊1週間前の案内メッセージ</label>
           <textarea id="oneWeekBefore" placeholder="1週間前のご案内..."></textarea>
+        </div>
+        <div class="form-row">
+          <label>施設情報（リッチメニュー「施設情報」）</label>
+          <textarea id="facilityInfo" placeholder="施設のご案内..."></textarea>
+        </div>
+        <div class="form-row">
+          <label>利用規約（リッチメニュー「利用規約」）</label>
+          <textarea id="termsOfUse" placeholder="利用規約の文面..."></textarea>
+        </div>
+        <div class="form-row">
+          <label>メッセージで問い合わせの誘導文（リッチメニュー「メッセージで問い合わせ」）</label>
+          <textarea id="contactPrompt" placeholder="メッセージでお送りください..."></textarea>
+        </div>
+        <div class="form-row">
+          <label>アクセス案内（リッチメニュー「アクセスについて」）</label>
+          <textarea id="accessInfo" placeholder="アクセスのご案内..."></textarea>
         </div>
         <button id="btnSaveSettings" class="btn btn-primary">設定を一括保存</button>
         <div id="settingsMessage" class="success-msg mb"></div>
@@ -403,9 +423,10 @@
         btn.disabled = false;
       }
 
-      const TEMPLATE_KEYS = ['oneWeekBefore', 'reservationConfirm', 'restaurantGuide', 'replyMessage'];
+      const TEMPLATE_KEYS = ['oneWeekBefore', 'reservationConfirm', 'restaurantGuide', 'replyMessage', 'facilityInfo', 'termsOfUse', 'contactPrompt', 'accessInfo'];
       const CONFIG_KEYS = [
         { key: 'driveFolderId', id: 'driveFolderId' },
+        { key: 'airbnbIcalUrl', id: 'airbnbIcalUrl' },
         { key: 'nightlyRate', id: 'nightlyRate' },
         { key: 'cleaningFee', id: 'cleaningFee' },
         { key: 'cleaningFeeWithPet', id: 'cleaningFeeWithPet' },
@@ -413,7 +434,7 @@
         { key: 'doorVideoYoutubeUrl', id: 'doorVideoYoutubeUrl' },
         { key: 'cleanerLineGroupId', id: 'cleanerLineGroupId' }
       ];
-      const TEMPLATE_KEY_TO_ID = { oneWeekBefore: 'oneWeekBefore', reservationConfirm: 'reservationConfirm', restaurantGuide: 'restaurantGuide', replyMessage: 'replyMessage' };
+      const TEMPLATE_KEY_TO_ID = { oneWeekBefore: 'oneWeekBefore', reservationConfirm: 'reservationConfirm', restaurantGuide: 'restaurantGuide', replyMessage: 'replyMessage', facilityInfo: 'facilityInfo', termsOfUse: 'termsOfUse', contactPrompt: 'contactPrompt', accessInfo: 'accessInfo' };
 
       async function loadSettings() {
         if (!profile || !isAdmin) return;
