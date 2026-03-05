@@ -260,19 +260,13 @@
       }
 
       function showDebugInfo(msg) {
-        const wrap = document.getElementById('debugWrap');
-        const el = document.getElementById('debugInfo');
-        if (!wrap || !el) return;
-        wrap.style.display = 'block';
-        const now = new Date().toLocaleTimeString();
-        el.innerHTML += '<div>' + now + ' - ' + escapeHtml(msg) + '</div>';
+        // デバッグ情報を非表示
+        return;
       }
 
       function updateDebugInfo(msg) {
-        const el = document.getElementById('adminDebugInfo');
-        if (!el) return;
-        const now = new Date().toLocaleTimeString();
-        el.innerHTML += '<div>' + now + ' - ' + escapeHtml(msg) + '</div>';
+        // デバッグ情報を非表示
+        return;
       }
 
       function initLIFF() {
