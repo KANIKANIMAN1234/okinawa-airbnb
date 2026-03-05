@@ -233,12 +233,16 @@
       }
 
       function showApp() {
+        console.log('[LIFF] ログイン成功 - userId:', profile ? profile.userId : 'なし', ', isAdmin:', isAdmin);
         document.getElementById('initState').style.display = 'none';
         document.getElementById('appArea').style.display = 'block';
         if (isAdmin) {
+          console.log('[管理者] 管理者モードで起動');
           document.querySelectorAll('.admin-only').forEach(el => el.classList.add('visible'));
           document.getElementById('tabSettings').style.display = 'block';
           loadSettings();
+        } else {
+          console.log('[一般] 一般ユーザーモードで起動');
         }
         initCalendar();
         bindEvents();
@@ -321,6 +325,7 @@
       async function fetchBlockedDates() {
         const r = await callGAS('getAvailability', { year: currentYear, month: currentMonth });
         blockedDates = (r && r.result && r.result.blockedDates) ? r.result.blockedDates : [];
+        console.log('[カレンダー] blockedDates取得:', blockedDates.length + '件', blockedDates);
       }
 
       async function fetchMyReservations() {
@@ -413,10 +418,14 @@
       }
 
       async function renderCalendar() {
+        console.log('[カレンダー] renderCalendar 開始:', currentYear + '年' + currentMonth + '月', ', isAdmin:', isAdmin);
         document.getElementById('monthLabel').textContent = currentYear + '年' + currentMonth + '月';
         await fetchBlockedDates();
         await fetchMyReservations();
-        if (isAdmin) await fetchAdminReservationDetails();
+        if (isAdmin) {
+          console.log('[管理者] fetchAdminReservationDetails を呼び出します');
+          await fetchAdminReservationDetails();
+        }
         const { last, firstDay } = getDaysInMonth(currentYear, currentMonth);
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = '';
