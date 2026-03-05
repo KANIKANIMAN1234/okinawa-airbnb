@@ -356,12 +356,14 @@
         const r = await callGAS('getAvailability', { year: currentYear, month: currentMonth });
         blockedDates = (r && r.result && r.result.blockedDates) ? r.result.blockedDates : [];
         console.log('[カレンダー] blockedDates取得:', blockedDates.length + '件', blockedDates);
+        showDebugInfo('ブロック日取得: ' + blockedDates.length + '件 - ' + JSON.stringify(blockedDates.slice(0, 10)));
       }
 
       async function fetchMyReservations() {
         if (!profile || !profile.userId) return;
         const r = await callGAS('getMyReservations', { lineUserId: profile.userId });
         myReservations = (r && r.result && r.result.reservations) ? r.result.reservations : [];
+        showDebugInfo('自分の予約取得: ' + myReservations.length + '件 - ' + JSON.stringify(myReservations));
       }
 
       function isMyReservation(key) {
