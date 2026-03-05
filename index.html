@@ -54,6 +54,7 @@
     .cal-day.checkout { background: #ff9800; color: #fff; }
     .cal-day.range { background: #e3f2fd; color: #1565c0; }
     .cal-day.my-reservation { border: 2px solid #2e7d32; background: #c8e6c9 !important; color: #1b5e20; }
+    .cal-day.other-reservation { background: #fff9c4 !important; color: #f57f17; border: 2px solid #fbc02d; }
 
     .admin-reservation-list { list-style: none; padding: 0; margin: 0; font-size: 13px; }
     .admin-reservation-list li { padding: 10px 12px; margin-bottom: 8px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid var(--line-green); }
@@ -483,7 +484,16 @@
           const blocked = isBlocked(currentYear, currentMonth, d);
           const myRes = blocked ? isMyReservation(key) : false;
           const dayEl = document.createElement('div');
-          dayEl.className = 'cal-day ' + (blocked ? 'blocked' : 'available') + (myRes ? ' my-reservation' : '');
+          let className = 'cal-day ' + (blocked ? 'blocked' : 'available');
+          if (myRes) {
+            className += ' my-reservation';
+          } else if (blocked && isAdmin) {
+            const detail = getReservationDetailForDate(key);
+            if (detail) {
+              className += ' other-reservation';
+            }
+          }
+          dayEl.className = className;
           dayEl.textContent = d;
           dayEl.dataset.date = key;
           if (blocked && isAdmin) {
