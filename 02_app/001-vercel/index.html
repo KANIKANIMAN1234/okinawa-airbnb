@@ -87,6 +87,10 @@
           <button type="button" id="nextMonth">翌月 →</button>
         </div>
         <div id="calendarGrid" class="calendar-grid"></div>
+        <div id="adminDebugWrap" class="admin-only mb" style="display:none; background:#fff3cd; padding:12px; border-radius:8px; font-size:12px; margin-bottom:12px;">
+          <strong>デバッグ情報（管理者用）</strong>
+          <div id="adminDebugInfo"></div>
+        </div>
         <div id="adminReservationListWrap" class="admin-only mb" style="display:none;">
           <div class="section-title">予約一覧（全件・管理者用）</div>
           <ul id="adminReservationList" class="admin-reservation-list"></ul>
@@ -240,12 +244,21 @@
           console.log('[管理者] 管理者モードで起動');
           document.querySelectorAll('.admin-only').forEach(el => el.classList.add('visible'));
           document.getElementById('tabSettings').style.display = 'block';
+          document.getElementById('adminDebugWrap').style.display = 'block';
+          updateDebugInfo('LIFF ログイン成功 - isAdmin: true, userId: ' + (profile ? profile.userId : 'なし'));
           loadSettings();
         } else {
           console.log('[一般] 一般ユーザーモードで起動');
         }
         initCalendar();
         bindEvents();
+      }
+
+      function updateDebugInfo(msg) {
+        const el = document.getElementById('adminDebugInfo');
+        if (!el) return;
+        const now = new Date().toLocaleTimeString();
+        el.innerHTML += '<div>' + now + ' - ' + escapeHtml(msg) + '</div>';
       }
 
       function initLIFF() {
@@ -345,11 +358,17 @@
       }
 
       async function fetchAdminReservationDetails() {
-        if (!isAdmin || !profile || !profile.userId) return;
+        if (!isAdmin || !profile || !profile.userId) {
+          updateDebugInfo('fetchAdminReservationDetails スキップ - isAdmin:' + isAdmin);
+          return;
+        }
+        updateDebugInfo('getAllReservationDetails API 呼び出し中...');
         const r = await callGAS('getAllReservationDetails', {
           lineUserId: profile.userId
         });
+        updateDebugInfo('API レスポンス: ' + JSON.stringify(r));
         adminReservationDetails = (r && r.status === 'success' && r.result && r.result.reservationDetails) ? r.result.reservationDetails : [];
+        updateDebugInfo('予約詳細取得: ' + adminReservationDetails.length + '件');
         console.log('[管理者] 予約詳細取得:', adminReservationDetails.length + '件', adminReservationDetails);
       }
 
