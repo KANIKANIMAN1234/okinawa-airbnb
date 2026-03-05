@@ -1,0 +1,7 @@
+# 機密・生成物
+config.js
+**/config.js
+node_modules/
+.env
+.env.local
+*.log
