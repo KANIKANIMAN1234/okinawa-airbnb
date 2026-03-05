@@ -481,9 +481,9 @@
         for (let d = 1; d <= last; d++) {
           const key = dateKey(currentYear, currentMonth, d);
           const blocked = isBlocked(currentYear, currentMonth, d);
-          const myRes = !blocked ? false : isMyReservation(key);
+          const myRes = blocked ? isMyReservation(key) : false;
           const dayEl = document.createElement('div');
-          dayEl.className = 'cal-day ' + (blocked ? 'blocked' : 'available') + (myRes ? ' my-reservation' : '');
+          dayEl.className = 'cal-day ' + (blocked ? 'blocked' : 'available') + (myRes && !isAdmin ? ' my-reservation' : '');
           dayEl.textContent = d;
           dayEl.dataset.date = key;
           if (blocked && isAdmin) {
@@ -493,6 +493,7 @@
               const amount = typeof detail.totalAmount === 'number' ? detail.totalAmount.toLocaleString() : detail.totalAmount;
               dayEl.title = 'LINE名: ' + detail.guestDisplayName + ', 予約: ' + String(detail.checkIn).slice(0, 10) + '〜' + String(detail.checkOut).slice(0, 10) + ', 金額: ¥' + amount;
               dayEl.classList.add('cal-day-admin-blocked');
+              dayEl.style.cursor = 'pointer';
               dayEl.addEventListener('click', () => showAdminReservationModal(detail));
             }
           } else if (!blocked) {
