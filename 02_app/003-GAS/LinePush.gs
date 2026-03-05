@@ -1,9 +1,14 @@
 /**
  * LINE Messaging API - Push Message
+ * @return {boolean} 送信に成功した場合 true、失敗時は false（トークン未設定・友だち未追加・API エラー等）
  */
 function pushToUser(userId, text) {
   var token = getChannelAccessToken();
-  if (!token) return;
+  if (!token) {
+    Logger.log('LINE Push: CHANNEL_ACCESS_TOKEN が設定されていません');
+    return false;
+  }
+  if (!userId || !text) return false;
   var url = 'https://api.line.me/v2/bot/message/push';
   var payload = {
     to: userId,
@@ -16,7 +21,18 @@ function pushToUser(userId, text) {
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
-  UrlFetchApp.fetch(url, options);
+  try {
+    var res = UrlFetchApp.fetch(url, options);
+    var code = res.getResponseCode();
+    if (code < 200 || code >= 300) {
+      Logger.log('LINE Push 失敗: status=' + code + ', body=' + res.getContentText());
+      return false;
+    }
+    return true;
+  } catch (e) {
+    Logger.log('LINE Push 例外: ' + (e.message || e));
+    return false;
+  }
 }
 
 function pushToGroup(groupId, text) {

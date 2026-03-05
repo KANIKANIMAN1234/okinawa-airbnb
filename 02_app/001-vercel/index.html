@@ -530,7 +530,13 @@
             totalAmount: total
           });
           if (r && r.status === 'success') {
-            document.getElementById('confirmMessage').textContent = '予約が確定しました。LINEで御礼メッセージをお送りしています。';
+            let msg = '予約が確定しました。';
+            if (r.result && r.result.lineNotifyGuest === false) {
+              msg += ' LINEへの御礼メッセージ送信に失敗しました。GASのスクリプトプロパティ（CHANNEL_ACCESS_TOKEN）と、公式アカウントの友だち追加をご確認ください。';
+            } else {
+              msg += ' LINEで御礼メッセージをお送りしています。';
+            }
+            document.getElementById('confirmMessage').textContent = msg;
             selectedCheckIn = null;
             selectedCheckOut = null;
             document.getElementById('dispCheckIn').textContent = '未選択';

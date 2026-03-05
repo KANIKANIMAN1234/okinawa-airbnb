@@ -78,24 +78,32 @@ function apiSaveConfig(data) {
 }
 
 function apiGetAvailability(data) {
-  var icalUrl = getConfigValue('airbnbIcalUrl');
-  if (!icalUrl) return { status: 'success', result: { blockedDates: [] } };
   var year = data && data.year;
   var month = data && data.month;
+  var blocked = [];
+  var icalUrl = getConfigValue('airbnbIcalUrl');
+  if (icalUrl) {
+    if (year != null && month != null) {
+      blocked = getBlockedDatesFromIcal(icalUrl, parseInt(year, 10), parseInt(month, 10));
+    } else {
+      var start = data && data.start;
+      var end = data && data.end;
+      if (start && end) {
+        var startDate = new Date(start);
+        var endDate = new Date(end);
+        blocked = getBlockedDatesInRange(icalUrl, startDate, endDate);
+      } else {
+        var now = new Date();
+        blocked = getBlockedDatesFromIcal(icalUrl, now.getFullYear(), now.getMonth() + 1);
+      }
+    }
+  }
   if (year != null && month != null) {
-    var blocked = getBlockedDatesFromIcal(icalUrl, parseInt(year, 10), parseInt(month, 10));
-    return { status: 'success', result: { blockedDates: blocked } };
+    var fromSheets = getBlockedDateKeysFromReservations(parseInt(year, 10), parseInt(month, 10));
+    for (var i = 0; i < fromSheets.length; i++) {
+      if (blocked.indexOf(fromSheets[i]) === -1) blocked.push(fromSheets[i]);
+    }
   }
-  var start = data && data.start;
-  var end = data && data.end;
-  if (start && end) {
-    var startDate = new Date(start);
-    var endDate = new Date(end);
-    var blocked = getBlockedDatesInRange(icalUrl, startDate, endDate);
-    return { status: 'success', result: { blockedDates: blocked } };
-  }
-  var now = new Date();
-  var blocked = getBlockedDatesFromIcal(icalUrl, now.getFullYear(), now.getMonth() + 1);
   return { status: 'success', result: { blockedDates: blocked } };
 }
 
@@ -146,12 +154,13 @@ function apiConfirmReservation(data) {
   var guestMsg = getTemplateBody('reservationConfirm') || 'ご予約ありがとうございます。当日はよろしくお願いいたします。';
   var restaurantGuide = getTemplateBody('restaurantGuide');
   if (restaurantGuide) guestMsg += '\n\n' + restaurantGuide;
-  pushToUser(lineUserId, guestMsg);
+  var lineNotifyGuest = pushToUser(lineUserId, guestMsg);
 
+  var lineNotifyAdmin = true;
   var adminId = getConfigValue('adminLineUserId');
   if (adminId) {
     var adminMsg = '予約が入りました\nゲスト: ' + (displayName || lineUserId) + '\nチェックイン: ' + checkIn + '\nチェックアウト: ' + checkOut + '\n人数: ' + (numberOfGuests || '-') + '\n金額: ' + (totalAmount != null ? totalAmount : amount + cleaningFee) + ' 円';
-    pushToUser(adminId, adminMsg);
+    lineNotifyAdmin = pushToUser(adminId, adminMsg);
   }
 
   var cleanerGroupId = getConfigValue('cleanerLineGroupId');
@@ -160,7 +169,14 @@ function apiConfirmReservation(data) {
     pushToGroup(cleanerGroupId, cleanerMsg);
   }
 
-  return { status: 'success', result: { reservationId: reservationId } };
+  return {
+    status: 'success',
+    result: {
+      reservationId: reservationId,
+      lineNotifyGuest: lineNotifyGuest,
+      lineNotifyAdmin: lineNotifyAdmin
+    }
+  };
 }
 
 function apiGetMyReservations(data) {

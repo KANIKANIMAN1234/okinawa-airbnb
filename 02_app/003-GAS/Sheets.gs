@@ -126,6 +126,39 @@ function createReservation(guestLineUserId, checkIn, checkOut, numberOfGuests, a
   return reservationId;
 }
 
+/**
+ * 指定月に含まれる「確定」予約の日付キー（YYYY-MM-DD）を返す（iCal とマージしてカレンダー用）
+ */
+function getBlockedDateKeysFromReservations(year, month) {
+  var sheet = getSheet(SHEET_NAMES.RESERVATIONS);
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var keysMap = {};
+  var monthStart = new Date(year, month - 1, 1);
+  var monthEnd = new Date(year, month, 0);
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][7] !== '確定') continue;
+    var checkInStr = String(data[i][2]).trim();
+    var checkOutStr = String(data[i][3]).trim();
+    if (!checkInStr || !checkOutStr) continue;
+    var cin = new Date(checkInStr);
+    var cout = new Date(checkOutStr);
+    if (isNaN(cin.getTime()) || isNaN(cout.getTime())) continue;
+    var d = new Date(cin.getTime());
+    while (d < cout) {
+      if (d >= monthStart && d <= monthEnd) {
+        var y = d.getFullYear();
+        var m = d.getMonth() + 1;
+        var day = d.getDate();
+        var key = y + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+        keysMap[key] = true;
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  return Object.keys(keysMap);
+}
+
 function getReservationsForMonth(year, month) {
   var sheet = getSheet(SHEET_NAMES.RESERVATIONS);
   if (!sheet) return [];
