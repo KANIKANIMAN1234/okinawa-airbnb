@@ -1,4 +1,4 @@
-# 機密・生成物
+# 機密・生成物（config.js 等はコミットしない）
 config.js
 **/config.js
 node_modules/
