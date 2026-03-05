@@ -584,6 +584,7 @@
         document.getElementById('confirmError').textContent = '';
         document.getElementById('confirmMessage').textContent = '';
         try {
+          showDebugInfo('予約確定リクエスト送信: checkIn=' + selectedCheckIn + ', checkOut=' + selectedCheckOut);
           const r = await callGAS('confirmReservation', {
             lineUserId: profile.userId,
             displayName: profile.displayName,
