@@ -483,7 +483,7 @@
           const blocked = isBlocked(currentYear, currentMonth, d);
           const myRes = blocked ? isMyReservation(key) : false;
           const dayEl = document.createElement('div');
-          dayEl.className = 'cal-day ' + (blocked ? 'blocked' : 'available') + (myRes && !isAdmin ? ' my-reservation' : '');
+          dayEl.className = 'cal-day ' + (blocked ? 'blocked' : 'available') + (myRes ? ' my-reservation' : '');
           dayEl.textContent = d;
           dayEl.dataset.date = key;
           if (blocked && isAdmin) {
