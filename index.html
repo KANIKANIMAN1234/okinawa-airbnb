@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>宿泊予約｜Airbnb LINE連携</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="config.js"></script>
+  <style>
+    :root {
+      --line-green: #06C755;
+      --line-blue: #007bff;
+      --bg-gray: #f0f2f5;
+      --border: #dddddd;
+      --error: #d9534f;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-gray); margin: 0; padding: 10px; font-size: 14px; }
+    .container { max-width: 500px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+    .tabs { display: flex; background: #eee; border-radius: 10px; padding: 4px; margin-bottom: 16px; }
+    .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; border-radius: 8px; color: #666; }
+    .tab.active { background: #fff; font-weight: bold; color: var(--line-green); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .loading { text-align: center; padding: 20px; color: #666; }
+    .error-msg { color: var(--error); font-size: 12px; margin-top: 4px; }
+    .success-msg { color: var(--line-green); font-size: 12px; margin-top: 4px; }
+
+    label { display: block; margin: 10px 0 4px; font-weight: bold; color: #555; font-size: 13px; }
+    input[type="text"], input[type="number"], input[type="url"], textarea, select {
+      width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; margin-bottom: 8px;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    .form-row { margin-bottom: 12px; }
+
+    .btn { padding: 12px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: bold; cursor: pointer; width: 100%; }
+    .btn-primary { background: var(--line-green); color: #fff; }
+    .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-secondary { background: #666; color: #fff; margin-top: 8px; }
+
+    .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .calendar-nav button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 14px; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 16px; }
+    .cal-header { text-align: center; font-size: 11px; color: #666; padding: 4px; }
+    .cal-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .cal-day.empty { visibility: hidden; }
+    .cal-day.blocked { background: #eee; color: #999; cursor: not-allowed; }
+    .cal-day.available { background: #e8f5e9; color: #2e7d32; }
+    .cal-day.selected { background: var(--line-green); color: #fff; }
+    .cal-day.checkin { background: var(--line-blue); color: #fff; }
+    .cal-day.checkout { background: #ff9800; color: #fff; }
+    .cal-day.range { background: #e3f2fd; color: #1565c0; }
+
+    .summary-box { background: #f9f9f9; padding: 12px; border-radius: 10px; margin: 12px 0; border: 1px solid var(--border); }
+    .total-price { font-size: 20px; font-weight: bold; color: #333; text-align: center; margin: 10px 0; }
+    .section-title { font-size: 14px; font-weight: bold; color: #333; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+    .admin-only { display: none; }
+    .admin-only.visible { display: block; }
+    .mb { margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="initState" class="loading">LINEで読み込み中...</div>
+    <div id="appArea" style="display:none;">
+      <div class="tabs">
+        <div id="tabBooking" class="tab active" data-page="booking">予約</div>
+        <div id="tabSettings" class="tab admin-only" data-page="settings">設定</div>
+      </div>
+      <div id="pageBooking" class="page active">
+        <div class="section-title">空き状況カレンダー</div>
+        <div class="calendar-nav">
+          <button type="button" id="prevMonth">← 前月</button>
+          <span id="monthLabel">----年--月</span>
+          <button type="button" id="nextMonth">翌月 →</button>
+        </div>
+        <div id="calendarGrid" class="calendar-grid"></div>
+        <div class="summary-box">
+          <div>チェックイン: <span id="dispCheckIn">未選択</span></div>
+          <div>チェックアウト: <span id="dispCheckOut">未選択</span></div>
+          <label>宿泊人数</label>
+          <select id="numGuests">
+            <option value="1">1人</option>
+            <option value="2">2人</option>
+            <option value="3">3人</option>
+            <option value="4">4人</option>
+            <option value="5">5人</option>
+            <option value="6">6人</option>
+            <option value="7">7人</option>
+            <option value="8">8人</option>
+            <option value="9">9人</option>
+            <option value="10">10人</option>
+          </select>
+          <div id="priceBreakdown"></div>
+          <div id="totalPrice" class="total-price">総支払金額: ---</div>
+        </div>
+        <button id="btnConfirm" class="btn btn-primary" disabled>宿泊を確定させる</button>
+        <div id="confirmMessage" class="success-msg"></div>
+        <div id="confirmError" class="error-msg"></div>
+      </div>
+      <div id="pageSettings" class="page">
+        <div class="section-title">管理者設定（管理者のLINEでのみ表示）</div>
+        <div class="form-row">
+          <label>月次PDF用 Google Drive フォルダID</label>
+          <input type="text" id="driveFolderId" placeholder="1RkQ9GF9teR76ufQ4lUvra2Nx90S3cR-Q">
+        </div>
+        <div class="form-row">
+          <label>一泊単価（円）</label>
+          <input type="number" id="nightlyRate" placeholder="15000">
+        </div>
+        <div class="form-row">
+          <label>清掃代（円）</label>
+          <input type="number" id="cleaningFee" placeholder="10000">
+        </div>
+        <div class="form-row">
+          <label>ペット宿泊ありの場合の清掃代（円）</label>
+          <input type="number" id="cleaningFeeWithPet" placeholder="15000">
+        </div>
+        <div class="form-row">
+          <label>チェックインガイドPDFのURL</label>
+          <input type="url" id="checkInGuidePdfUrl" placeholder="https://...">
+        </div>
+        <div class="form-row">
+          <label>玄関ドアの開け方動画URL（YouTube等）</label>
+          <input type="url" id="doorVideoYoutubeUrl" placeholder="https://...">
+        </div>
+        <div class="form-row">
+          <label>清掃員LINEグループID</label>
+          <input type="text" id="cleanerLineGroupId" placeholder="Cxxxx...">
+        </div>
+        <div class="section-title">メッセージテンプレート</div>
+        <div class="form-row">
+          <label>返信メッセージ</label>
+          <textarea id="replyMessage" placeholder="問い合わせへの返信用"></textarea>
+        </div>
+        <div class="form-row">
+          <label>予約確定メッセージ（ゲストに送る御礼文）</label>
+          <textarea id="reservationConfirm" placeholder="予約ありがとうございます..."></textarea>
+        </div>
+        <div class="form-row">
+          <label>周辺のおすすめレストラン案内</label>
+          <textarea id="restaurantGuide" placeholder="近くのオススメ..."></textarea>
+        </div>
+        <div class="form-row">
+          <label>宿泊1週間前の案内メッセージ</label>
+          <textarea id="oneWeekBefore" placeholder="1週間前のご案内..."></textarea>
+        </div>
+        <button id="btnSaveSettings" class="btn btn-primary">設定を一括保存</button>
+        <div id="settingsMessage" class="success-msg mb"></div>
+        <div id="settingsError" class="error-msg mb"></div>
+        <div class="section-title">月締め・PDF出力</div>
+        <div class="form-row">
+          <label>対象月</label>
+          <select id="closeYear"></select>
+          <select id="closeMonth"></select>
+        </div>
+        <button id="btnCloseMonth" class="btn btn-secondary">この月を締めてPDFを保存</button>
+        <div id="closeMonthMessage" class="success-msg mb"></div>
+        <div id="closeMonthError" class="error-msg mb"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const LIFF_ID = typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.LIFF_ID : '';
+      const GAS_URL = typeof APP_CONFIG !== 'undefined' ? APP_CONFIG.GAS_API_URL : '';
+
+      let profile = null;
+      let isAdmin = false;
+      let currentYear = new Date().getFullYear();
+      let currentMonth = new Date().getMonth() + 1;
+      let blockedDates = [];
+      let pricing = { nightlyRate: 0, cleaningFee: 0 };
+      let selectedCheckIn = null;
+      let selectedCheckOut = null;
+
+      async function callGAS(action, data) {
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, data: data || {} })
+        });
+        return await res.json();
+      }
+
+      function showApp() {
+        document.getElementById('initState').style.display = 'none';
+        document.getElementById('appArea').style.display = 'block';
+        if (isAdmin) {
+          document.querySelectorAll('.admin-only').forEach(el => el.classList.add('visible'));
+          document.getElementById('tabSettings').style.display = 'block';
+          loadSettings();
+        }
+        initCalendar();
+        bindEvents();
+      }
+
+      function initLIFF() {
+        if (!LIFF_ID || !GAS_URL) {
+          document.getElementById('initState').textContent = 'config.js で LIFF_ID と GAS_API_URL を設定してください。';
+          return;
+        }
+        liff.init({ liffId: LIFF_ID }).then(() => {
+          if (!liff.isLoggedIn()) {
+            liff.login();
+            return;
+          }
+          return liff.getProfile();
+        }).then(async (p) => {
+          if (!p) return;
+          profile = { userId: p.userId, displayName: p.displayName };
+          const r = await callGAS('isAdmin', { lineUserId: p.userId });
+          isAdmin = r && r.result && r.result.isAdmin === true;
+          showApp();
+        }).catch(err => {
+          console.error(err);
+          document.getElementById('initState').textContent = 'ログインに失敗しました。';
+        });
+      }
+
+      function bindEvents() {
+        document.querySelectorAll('.tab').forEach(tab => {
+          tab.addEventListener('click', () => {
+            const page = tab.getAttribute('data-page');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('page' + (page === 'booking' ? 'Booking' : 'Settings')).classList.add('active');
+            if (page === 'settings') loadSettings();
+          });
+        });
+        document.getElementById('prevMonth').addEventListener('click', () => { currentMonth--; if (currentMonth < 1) { currentMonth = 12; currentYear--; } renderCalendar(); });
+        document.getElementById('nextMonth').addEventListener('click', () => { currentMonth++; if (currentMonth > 12) { currentMonth = 1; currentYear++; } renderCalendar(); });
+        document.getElementById('btnConfirm').addEventListener('click', doConfirmReservation);
+        document.getElementById('numGuests').addEventListener('change', updateTotal);
+        document.getElementById('btnSaveSettings').addEventListener('click', saveAllSettings);
+        document.getElementById('btnCloseMonth').addEventListener('click', doCloseMonth);
+      }
+
+      function initCalendar() {
+        const y = new Date().getFullYear();
+        for (let i = y; i <= y + 2; i++) document.getElementById('closeYear').add(new Option(i + '年', i));
+        for (let m = 1; m <= 12; m++) document.getElementById('closeMonth').add(new Option(m + '月', m));
+        document.getElementById('closeMonth').value = new Date().getMonth() + 1;
+        fetchPricing();
+        renderCalendar();
+      }
+
+      async function fetchPricing() {
+        const r = await callGAS('getPricing', {});
+        if (r && r.status === 'success' && r.result) {
+          pricing = { nightlyRate: Number(r.result.nightlyRate) || 0, cleaningFee: Number(r.result.cleaningFee) || 0 };
+        }
+      }
+
+      async function fetchBlockedDates() {
+        const r = await callGAS('getAvailability', { year: currentYear, month: currentMonth });
+        blockedDates = (r && r.result && r.result.blockedDates) ? r.result.blockedDates : [];
+      }
+
+      function dateKey(y, m, d) {
+        const mm = String(m).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        return y + '-' + mm + '-' + dd;
+      }
+
+      function isBlocked(y, m, d) {
+        return blockedDates.indexOf(dateKey(y, m, d)) !== -1;
+      }
+
+      function getDaysInMonth(y, m) {
+        const last = new Date(y, m, 0).getDate();
+        const firstDay = new Date(y, m - 1, 1).getDay();
+        return { last, firstDay };
+      }
+
+      async function renderCalendar() {
+        document.getElementById('monthLabel').textContent = currentYear + '年' + currentMonth + '月';
+        await fetchBlockedDates();
+        const { last, firstDay } = getDaysInMonth(currentYear, currentMonth);
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+        const weeks = ['日','月','火','水','木','金','土'];
+        weeks.forEach(w => {
+          const h = document.createElement('div');
+          h.className = 'cal-header';
+          h.textContent = w;
+          grid.appendChild(h);
+        });
+        let cell = 0;
+        for (let i = 0; i < firstDay; i++) {
+          const empty = document.createElement('div');
+          empty.className = 'cal-day empty';
+          grid.appendChild(empty);
+          cell++;
+        }
+        for (let d = 1; d <= last; d++) {
+          const key = dateKey(currentYear, currentMonth, d);
+          const blocked = isBlocked(currentYear, currentMonth, d);
+          const dayEl = document.createElement('div');
+          dayEl.className = 'cal-day ' + (blocked ? 'blocked' : 'available');
+          dayEl.textContent = d;
+          dayEl.dataset.date = key;
+          if (!blocked) {
+            dayEl.addEventListener('click', () => onDateClick(key));
+          }
+          grid.appendChild(dayEl);
+          cell++;
+        }
+        highlightSelection();
+        updateTotal();
+      }
+
+      function onDateClick(key) {
+        const d = new Date(key);
+        if (!selectedCheckIn) {
+          selectedCheckIn = key;
+          selectedCheckOut = null;
+        } else if (!selectedCheckOut) {
+          const cin = new Date(selectedCheckIn);
+          if (d <= cin) { selectedCheckIn = key; selectedCheckOut = null; }
+          else selectedCheckOut = key;
+        } else {
+          selectedCheckIn = key;
+          selectedCheckOut = null;
+        }
+        document.getElementById('dispCheckIn').textContent = selectedCheckIn || '未選択';
+        document.getElementById('dispCheckOut').textContent = selectedCheckOut || '未選択';
+        highlightSelection();
+        updateTotal();
+      }
+
+      function highlightSelection() {
+        document.querySelectorAll('.cal-day[data-date]').forEach(el => {
+          el.classList.remove('selected', 'checkin', 'checkout', 'range');
+          const key = el.dataset.date;
+          if (key === selectedCheckIn) el.classList.add('checkin');
+          else if (key === selectedCheckOut) el.classList.add('checkout');
+          else if (selectedCheckIn && selectedCheckOut) {
+            const t = new Date(key).getTime();
+            const c1 = new Date(selectedCheckIn).getTime();
+            const c2 = new Date(selectedCheckOut).getTime();
+            if (t > c1 && t < c2) el.classList.add('range');
+          } else if (key === selectedCheckIn) el.classList.add('selected');
+        });
+        const btn = document.getElementById('btnConfirm');
+        const canConfirm = selectedCheckIn && selectedCheckOut && pricing.nightlyRate > 0;
+        btn.disabled = !canConfirm;
+      }
+
+      function updateTotal() {
+        let nights = 0;
+        if (selectedCheckIn && selectedCheckOut) {
+          const a = new Date(selectedCheckIn);
+          const b = new Date(selectedCheckOut);
+          nights = Math.round((b - a) / (24 * 60 * 60 * 1000));
+        }
+        const guestNum = parseInt(document.getElementById('numGuests').value, 10) || 1;
+        const accommodation = pricing.nightlyRate * nights;
+        const cleaning = pricing.cleaningFee;
+        const total = accommodation + cleaning;
+        document.getElementById('priceBreakdown').innerHTML = nights > 0
+          ? '<div>宿泊料金: ¥' + accommodation.toLocaleString() + '（' + pricing.nightlyRate.toLocaleString() + '円×' + nights + '泊）</div><div>清掃代: ¥' + cleaning.toLocaleString() + '</div>'
+          : '';
+        document.getElementById('totalPrice').textContent = total > 0 ? '総支払金額: ¥' + total.toLocaleString() : '総支払金額: ---';
+      }
+
+      async function doConfirmReservation() {
+        if (!profile || !selectedCheckIn || !selectedCheckOut) return;
+        const a = new Date(selectedCheckIn);
+        const b = new Date(selectedCheckOut);
+        const nights = Math.round((b - a) / (24 * 60 * 60 * 1000));
+        const total = pricing.nightlyRate * nights + pricing.cleaningFee;
+        const btn = document.getElementById('btnConfirm');
+        btn.disabled = true;
+        document.getElementById('confirmError').textContent = '';
+        document.getElementById('confirmMessage').textContent = '';
+        try {
+          const r = await callGAS('confirmReservation', {
+            lineUserId: profile.userId,
+            displayName: profile.displayName,
+            checkIn: selectedCheckIn,
+            checkOut: selectedCheckOut,
+            numberOfGuests: parseInt(document.getElementById('numGuests').value, 10) || 1,
+            totalAmount: total
+          });
+          if (r && r.status === 'success') {
+            document.getElementById('confirmMessage').textContent = '予約が確定しました。LINEで御礼メッセージをお送りしています。';
+            selectedCheckIn = null;
+            selectedCheckOut = null;
+            document.getElementById('dispCheckIn').textContent = '未選択';
+            document.getElementById('dispCheckOut').textContent = '未選択';
+            renderCalendar();
+          } else {
+            document.getElementById('confirmError').textContent = r && r.message ? r.message : '予約に失敗しました。';
+          }
+        } catch (e) {
+          document.getElementById('confirmError').textContent = '通信エラーです。';
+        }
+        btn.disabled = false;
+      }
+
+      const TEMPLATE_KEYS = ['oneWeekBefore', 'reservationConfirm', 'restaurantGuide', 'replyMessage'];
+      const CONFIG_KEYS = [
+        { key: 'driveFolderId', id: 'driveFolderId' },
+        { key: 'nightlyRate', id: 'nightlyRate' },
+        { key: 'cleaningFee', id: 'cleaningFee' },
+        { key: 'cleaningFeeWithPet', id: 'cleaningFeeWithPet' },
+        { key: 'checkInGuidePdfUrl', id: 'checkInGuidePdfUrl' },
+        { key: 'doorVideoYoutubeUrl', id: 'doorVideoYoutubeUrl' },
+        { key: 'cleanerLineGroupId', id: 'cleanerLineGroupId' }
+      ];
+      const TEMPLATE_KEY_TO_ID = { oneWeekBefore: 'oneWeekBefore', reservationConfirm: 'reservationConfirm', restaurantGuide: 'restaurantGuide', replyMessage: 'replyMessage' };
+
+      async function loadSettings() {
+        if (!profile || !isAdmin) return;
+        for (const k of TEMPLATE_KEYS) {
+          const r = await callGAS('getTemplate', { key: k });
+          const id = TEMPLATE_KEY_TO_ID[k];
+          if (id && document.getElementById(id)) document.getElementById(id).value = (r && r.result && r.result.body) ? r.result.body : '';
+        }
+        for (const c of CONFIG_KEYS) {
+          const r = await callGAS('getConfig', { key: c.key });
+          const el = document.getElementById(c.id);
+          if (el) el.value = (r && r.result && r.result.value !== undefined) ? r.result.value : '';
+        }
+      }
+
+      async function saveAllSettings() {
+        if (!profile || !isAdmin) return;
+        const btn = document.getElementById('btnSaveSettings');
+        btn.disabled = true;
+        document.getElementById('settingsError').textContent = '';
+        document.getElementById('settingsMessage').textContent = '保存中...';
+        try {
+          for (const k of TEMPLATE_KEYS) {
+            const id = TEMPLATE_KEY_TO_ID[k];
+            const el = document.getElementById(id);
+            if (el) await callGAS('saveTemplate', { key: k, body: el.value });
+          }
+          for (const c of CONFIG_KEYS) {
+            const el = document.getElementById(c.id);
+            const val = el ? (el.type === 'number' ? String(el.value) : el.value) : '';
+            await callGAS('saveConfig', { lineUserId: profile.userId, key: c.key, value: val });
+          }
+          document.getElementById('settingsMessage').textContent = '保存しました。';
+        } catch (e) {
+          document.getElementById('settingsError').textContent = '保存に失敗しました。';
+        }
+        btn.disabled = false;
+      }
+
+      async function doCloseMonth() {
+        if (!profile || !isAdmin) return;
+        const year = parseInt(document.getElementById('closeYear').value, 10);
+        const month = parseInt(document.getElementById('closeMonth').value, 10);
+        document.getElementById('closeMonthError').textContent = '';
+        document.getElementById('closeMonthMessage').textContent = '実行中...';
+        try {
+          const r = await callGAS('closeMonth', { lineUserId: profile.userId, year, month });
+          if (r && r.status === 'success') {
+            document.getElementById('closeMonthMessage').textContent = year + '年' + month + '月を締め、PDFを保存しました。';
+          } else {
+            document.getElementById('closeMonthError').textContent = r && r.message ? r.message : '月締めに失敗しました。';
+          }
+        } catch (e) {
+          document.getElementById('closeMonthError').textContent = '通信エラーです。';
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLIFF);
+      } else {
+        initLIFF();
+      }
+    })();
+  </script>
+</body>
+</html>
