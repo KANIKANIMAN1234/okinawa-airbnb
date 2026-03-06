@@ -365,7 +365,8 @@ function savePhotos(photos) {
 }
 
 function uploadPhotoToDrive(base64Data, fileName, mimeType) {
-  var folderId = getConfigValue('photosFolderId');
+  var props = PropertiesService.getScriptProperties();
+  var folderId = props.getProperty('photosFolderId');
   if (!folderId) {
     throw new Error('photosFolderId が設定されていません');
   }
