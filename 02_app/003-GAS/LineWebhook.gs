@@ -19,13 +19,37 @@ function handleLineWebhook(postData) {
   for (var i = 0; i < events.length; i++) {
     var event = events[i];
     try {
+      // グループIDをログ出力＆スプレッドシートに記録（OPENチャット・グループトーク用）
+      if (event.source && event.source.type === 'group') {
+        var groupId = event.source.groupId;
+        Logger.log('=== グループIDを検出 ===');
+        Logger.log('グループID: ' + groupId);
+        Logger.log('イベントタイプ: ' + event.type);
+        Logger.log('送信者userId: ' + (event.source.userId || 'なし'));
+        Logger.log('========================');
+        
+        // スプレッドシートに記録
+        try {
+          var ss = SpreadsheetApp.openById(getSpreadsheetId());
+          var sheet = ss.getSheetByName('group_ids');
+          if (!sheet) {
+            sheet = ss.insertSheet('group_ids');
+            sheet.appendRow(['検出日時', 'グループID', 'イベントタイプ', 'メッセージ内容']);
+          }
+          var messageText = (event.message && event.message.text) ? event.message.text : '';
+          sheet.appendRow([new Date(), groupId, event.type, messageText]);
+        } catch (e) {
+          Logger.log('スプレッドシート記録エラー: ' + e.message);
+        }
+      }
+      
       if (event.type === 'message' && event.message && event.message.type === 'text') {
         handleMessageEvent(event);
       } else if (event.type === 'postback') {
         handlePostbackEvent(event);
       }
     } catch (e) {
-      // 個別イベント失敗時も続行、200 を返す
+      Logger.log('イベント処理エラー: ' + e.message);
     }
   }
 }
