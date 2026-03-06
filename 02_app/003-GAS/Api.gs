@@ -387,7 +387,14 @@ function apiCancelReservation(data) {
                    'またのご利用をお待ちしております。';
     pushToUser(lineUserId, guestMsg);
   }
-  
+
+  // 清掃会社グループへ通知
+  var cleanerGroupId = getConfigValue('cleanerLineGroupId');
+  if (cleanerGroupId) {
+    var cleanerMsg = result.checkIn + '〜' + result.checkOut + ' の予約がキャンセルされました。清掃は不要です。';
+    pushToGroup(cleanerGroupId, cleanerMsg);
+  }
+
   removeReservationFromCalendar(reservationId, result.checkIn, result.checkOut);
   
   return {
