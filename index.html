@@ -155,14 +155,14 @@
         <div id="photoManagement" class="admin-only" style="display:none;">
           <div class="section-title">写真管理（管理者用）</div>
           <div class="form-row">
-            <label>写真URL</label>
-            <input type="url" id="newPhotoUrl" placeholder="https://...">
+            <label>写真を選択</label>
+            <input type="file" id="photoFileInput" accept="image/*">
           </div>
           <div class="form-row">
             <label>説明文（オプション）</label>
             <input type="text" id="newPhotoCaption" placeholder="リビングルーム">
           </div>
-          <button type="button" id="btnAddPhoto" class="btn btn-primary">写真を追加</button>
+          <button type="button" id="btnAddPhoto" class="btn btn-primary">写真をアップロード</button>
           <div id="photoList" class="photo-list"></div>
           <button type="button" id="btnSavePhotos" class="btn btn-secondary" style="display:none;">並び順を保存</button>
         </div>
@@ -827,23 +827,55 @@
       }
 
       async function addPhoto() {
-        const url = document.getElementById('newPhotoUrl').value.trim();
+        const fileInput = document.getElementById('photoFileInput');
         const caption = document.getElementById('newPhotoCaption').value.trim();
-        if (!url) {
-          alert('写真URLを入力してください。');
+        if (!fileInput.files || fileInput.files.length === 0) {
+          alert('写真を選択してください。');
           return;
         }
-        const newPhoto = {
-          photoId: 'P' + Date.now(),
-          imageUrl: url,
-          displayOrder: photos.length,
-          caption: caption
-        };
-        photos.push(newPhoto);
-        document.getElementById('newPhotoUrl').value = '';
-        document.getElementById('newPhotoCaption').value = '';
-        renderPhotoGallery();
-        renderPhotoManagement();
+        const file = fileInput.files[0];
+        if (!file.type.startsWith('image/')) {
+          alert('画像ファイルを選択してください。');
+          return;
+        }
+        try {
+          const base64Data = await fileToBase64(file);
+          const uploadRes = await callGAS('uploadPhoto', {
+            lineUserId: currentUserId,
+            base64Data: base64Data,
+            fileName: file.name,
+            mimeType: file.type
+          });
+          if (uploadRes && uploadRes.status === 'success' && uploadRes.result && uploadRes.result.imageUrl) {
+            const newPhoto = {
+              photoId: 'P' + Date.now(),
+              imageUrl: uploadRes.result.imageUrl,
+              displayOrder: photos.length,
+              caption: caption
+            };
+            photos.push(newPhoto);
+            fileInput.value = '';
+            document.getElementById('newPhotoCaption').value = '';
+            renderPhotoGallery();
+            renderPhotoManagement();
+          } else {
+            alert('アップロードに失敗しました: ' + (uploadRes && uploadRes.message || '不明なエラー'));
+          }
+        } catch (e) {
+          alert('アップロード中にエラーが発生しました: ' + e.message);
+        }
+      }
+
+      function fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
       }
 
       async function savePhotos() {
