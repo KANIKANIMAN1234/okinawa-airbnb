@@ -488,23 +488,14 @@ function getBlockedDateKeysFromPeriods(year, month) {
     var periodEndMonth = parseInt(endParts[1], 10);
     var periodEndDay = parseInt(endParts[2], 10);
     
-    var currentDate = new Date(year, month - 1, 1);
     var lastDayOfMonth = new Date(year, month, 0).getDate();
     
     for (var day = 1; day <= lastDayOfMonth; day++) {
-      var currentYear = year;
-      var currentMonth = month;
-      var currentDay = day;
+      var currentYMD = year * 10000 + month * 100 + day;
+      var periodStartYMD = periodStartYear * 10000 + periodStartMonth * 100 + periodStartDay;
+      var periodEndYMD = periodEndYear * 10000 + periodEndMonth * 100 + periodEndDay;
       
-      var isAfterStart = (currentYear > periodStartYear) ||
-                         (currentYear === periodStartYear && currentMonth > periodStartMonth) ||
-                         (currentYear === periodStartYear && currentMonth === periodStartMonth && currentDay >= periodStartDay);
-      
-      var isBeforeEnd = (currentYear < periodEndYear) ||
-                        (currentYear === periodEndYear && currentMonth < periodEndMonth) ||
-                        (currentYear === periodEndYear && currentMonth === periodEndMonth && currentDay <= periodEndDay);
-      
-      if (isAfterStart && isBeforeEnd) {
+      if (currentYMD >= periodStartYMD && currentYMD <= periodEndYMD) {
         var key = year + '-' + 
                   (month < 10 ? '0' : '') + month + '-' + 
                   (day < 10 ? '0' : '') + day;
