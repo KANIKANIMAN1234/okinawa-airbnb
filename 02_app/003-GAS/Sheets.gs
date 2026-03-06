@@ -375,6 +375,6 @@ function uploadPhotoToDrive(base64Data, fileName, mimeType) {
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   var fileId = file.getId();
-  var url = 'https://drive.google.com/uc?export=view&id=' + fileId;
+  var url = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000';
   return url;
 }
