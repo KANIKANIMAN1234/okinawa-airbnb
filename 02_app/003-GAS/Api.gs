@@ -362,18 +362,30 @@ function apiCancelReservation(data) {
     return { status: 'error', message: result.message };
   }
   
-  if (result.cancellationFee > 0) {
-    var adminId = getConfigValue('adminLineUserId');
-    if (adminId) {
-      var feeRateText = result.cancellationFeeRate === 1.0 ? '100%' : 
-                        result.cancellationFeeRate === 0.8 ? '80%' : 
-                        result.cancellationFeeRate === 0.5 ? '50%' : '0%';
-      var adminMsg = 'キャンセルが発生しました\n予約ID: ' + reservationId + 
-                     '\nチェックイン: ' + result.checkIn + 
-                     '\nキャンセル料率: ' + feeRateText + 
-                     '\nキャンセル料: ' + result.cancellationFee + '円';
-      pushToUser(adminId, adminMsg);
-    }
+  var feeRateText = result.cancellationFeeRate === 1.0 ? '100%' : 
+                    result.cancellationFeeRate === 0.8 ? '80%' : 
+                    result.cancellationFeeRate === 0.5 ? '50%' : '0%';
+  
+  // 管理者へ通知（キャンセル料の有無に関わらず常に送信）
+  var adminId = getConfigValue('adminLineUserId');
+  if (adminId) {
+    var adminMsg = '予約がキャンセルされました\n' +
+                   '予約ID: ' + reservationId + '\n' +
+                   'チェックイン: ' + result.checkIn + '\n' +
+                   'チェックアウト: ' + result.checkOut + '\n' +
+                   'キャンセル料率: ' + feeRateText + '\n' +
+                   'キャンセル料: ¥' + result.cancellationFee + '円';
+    pushToUser(adminId, adminMsg);
+  }
+  
+  // ゲスト本人へ通知
+  if (lineUserId) {
+    var guestMsg = 'ご予約をキャンセルしました。\n' +
+                   'チェックイン: ' + result.checkIn + '\n' +
+                   'チェックアウト: ' + result.checkOut + '\n' +
+                   'キャンセル料: ¥' + result.cancellationFee + '円（' + feeRateText + '）\n' +
+                   'またのご利用をお待ちしております。';
+    pushToUser(lineUserId, guestMsg);
   }
   
   removeReservationFromCalendar(reservationId, result.checkIn, result.checkOut);
