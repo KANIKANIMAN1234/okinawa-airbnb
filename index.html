@@ -115,10 +115,6 @@
           <strong>デバッグ情報（管理者用）</strong>
           <div id="adminDebugInfo"></div>
         </div>
-        <div id="adminReservationListWrap" class="admin-only mb" style="display:none;">
-          <div class="section-title">予約一覧（全件・管理者用）</div>
-          <ul id="adminReservationList" class="admin-reservation-list"></ul>
-        </div>
         <div id="myReservationListWrap" class="mb" style="display:none;">
           <div class="section-title">あなたの予約</div>
           <ul id="myReservationList" class="my-reservation-list"></ul>
@@ -411,9 +407,27 @@
 
       async function fetchMyReservations() {
         if (!profile || !profile.userId) return;
-        const r = await callGAS('getMyReservations', { lineUserId: profile.userId });
-        myReservations = (r && r.result && r.result.reservations) ? r.result.reservations : [];
-        showDebugInfo('自分の予約取得: ' + myReservations.length + '件 - ' + JSON.stringify(myReservations));
+        
+        if (isAdmin) {
+          const r = await callGAS('getAllReservationDetails', { lineUserId: profile.userId });
+          const allReservations = (r && r.result && r.result.reservationDetails) ? r.result.reservationDetails : [];
+          myReservations = allReservations.map(detail => ({
+            reservationId: detail.reservationId,
+            checkIn: detail.checkIn,
+            checkOut: detail.checkOut,
+            numberOfGuests: detail.numberOfGuests,
+            amount: detail.amount,
+            cleaningFee: detail.cleaningFee,
+            status: detail.status,
+            guestDisplayName: detail.guestDisplayName
+          }));
+          showDebugInfo('管理者：全予約取得: ' + myReservations.length + '件');
+        } else {
+          const r = await callGAS('getMyReservations', { lineUserId: profile.userId });
+          myReservations = (r && r.result && r.result.reservations) ? r.result.reservations : [];
+          showDebugInfo('自分の予約取得: ' + myReservations.length + '件');
+        }
+        
         renderMyReservationList();
       }
       
@@ -464,7 +478,10 @@
           const totalAmount = (Number(res.amount) || 0) + (Number(res.cleaningFee) || 0);
           const cancellationFee = Math.floor(totalAmount * cancellationFeeRate);
           
+          const guestNameHtml = isAdmin && res.guestDisplayName ? `<div><strong>ゲスト名:</strong> ${res.guestDisplayName}</div>` : '';
+          
           li.innerHTML = `
+            ${guestNameHtml}
             <div><strong>チェックイン:</strong> ${res.checkIn}</div>
             <div><strong>チェックアウト:</strong> ${res.checkOut}</div>
             <div><strong>宿泊人数:</strong> ${res.numberOfGuests}名</div>
@@ -598,10 +615,6 @@
         document.getElementById('monthLabel').textContent = currentYear + '年' + currentMonth + '月';
         await fetchBlockedDates();
         await fetchMyReservations();
-        if (isAdmin) {
-          console.log('[管理者] fetchAdminReservationDetails を呼び出します');
-          await fetchAdminReservationDetails();
-        }
         const { last, firstDay } = getDaysInMonth(currentYear, currentMonth);
         const grid = document.getElementById('calendarGrid');
         grid.innerHTML = '';
@@ -658,7 +671,6 @@
         }
         highlightSelection();
         updateTotal();
-        renderAdminReservationList();
       }
 
       function onDateClick(key) {
