@@ -153,14 +153,38 @@ function apiConfirmReservation(data) {
   
   var periods = getBlockedPeriods();
   for (var p = 0; p < periods.length; p++) {
-    var periodStart = new Date(periods[p].startDate);
-    var periodEnd = new Date(periods[p].endDate);
-    var d = new Date(Math.max(startDate.getTime(), periodStart.getTime()));
-    var end = new Date(Math.min(endDate.getTime(), periodEnd.getTime()));
-    while (d < end) {
-      var key = d.getFullYear() + '-' + (d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1) + '-' + (d.getDate() < 10 ? '0' : '') + d.getDate();
+    var startParts = periods[p].startDate.split('-');
+    var endParts = periods[p].endDate.split('-');
+    var periodStartYear = parseInt(startParts[0], 10);
+    var periodStartMonth = parseInt(startParts[1], 10);
+    var periodStartDay = parseInt(startParts[2], 10);
+    var periodEndYear = parseInt(endParts[0], 10);
+    var periodEndMonth = parseInt(endParts[1], 10);
+    var periodEndDay = parseInt(endParts[2], 10);
+    
+    var checkInParts = checkIn.split('-');
+    var checkOutParts = checkOut.split('-');
+    var checkInYear = parseInt(checkInParts[0], 10);
+    var checkInMonth = parseInt(checkInParts[1], 10);
+    var checkInDay = parseInt(checkInParts[2], 10);
+    var checkOutYear = parseInt(checkOutParts[0], 10);
+    var checkOutMonth = parseInt(checkOutParts[1], 10);
+    var checkOutDay = parseInt(checkOutParts[2], 10);
+    
+    var periodStartDate = new Date(periodStartYear, periodStartMonth - 1, periodStartDay);
+    var periodEndDate = new Date(periodEndYear, periodEndMonth - 1, periodEndDay);
+    var reservationStartDate = new Date(checkInYear, checkInMonth - 1, checkInDay);
+    var reservationEndDate = new Date(checkOutYear, checkOutMonth - 1, checkOutDay);
+    
+    var currentDate = new Date(Math.max(reservationStartDate.getTime(), periodStartDate.getTime()));
+    var endDate = new Date(Math.min(reservationEndDate.getTime(), periodEndDate.getTime()));
+    
+    while (currentDate < endDate) {
+      var key = currentDate.getFullYear() + '-' + 
+                (currentDate.getMonth() + 1 < 10 ? '0' : '') + (currentDate.getMonth() + 1) + '-' + 
+                (currentDate.getDate() < 10 ? '0' : '') + currentDate.getDate();
       if (allBlocked.indexOf(key) === -1) allBlocked.push(key);
-      d.setDate(d.getDate() + 1);
+      currentDate.setDate(currentDate.getDate() + 1);
     }
   }
   

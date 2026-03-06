@@ -474,24 +474,44 @@ function saveBlockedPeriods(periods) {
 function getBlockedDateKeysFromPeriods(year, month) {
   var periods = getBlockedPeriods();
   var result = [];
-  var startOfMonth = new Date(year, month - 1, 1);
-  var endOfMonth = new Date(year, month, 0);
   
   for (var i = 0; i < periods.length; i++) {
-    var periodStart = new Date(periods[i].startDate);
-    var periodEnd = new Date(periods[i].endDate);
+    var startDateStr = periods[i].startDate;
+    var endDateStr = periods[i].endDate;
     
-    var d = new Date(Math.max(periodStart.getTime(), startOfMonth.getTime()));
-    var end = new Date(Math.min(periodEnd.getTime(), endOfMonth.getTime()));
+    var startParts = startDateStr.split('-');
+    var endParts = endDateStr.split('-');
+    var periodStartYear = parseInt(startParts[0], 10);
+    var periodStartMonth = parseInt(startParts[1], 10);
+    var periodStartDay = parseInt(startParts[2], 10);
+    var periodEndYear = parseInt(endParts[0], 10);
+    var periodEndMonth = parseInt(endParts[1], 10);
+    var periodEndDay = parseInt(endParts[2], 10);
     
-    while (d <= end) {
-      var key = d.getFullYear() + '-' + 
-                (d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1) + '-' + 
-                (d.getDate() < 10 ? '0' : '') + d.getDate();
-      if (result.indexOf(key) === -1) {
-        result.push(key);
+    var currentDate = new Date(year, month - 1, 1);
+    var lastDayOfMonth = new Date(year, month, 0).getDate();
+    
+    for (var day = 1; day <= lastDayOfMonth; day++) {
+      var currentYear = year;
+      var currentMonth = month;
+      var currentDay = day;
+      
+      var isAfterStart = (currentYear > periodStartYear) ||
+                         (currentYear === periodStartYear && currentMonth > periodStartMonth) ||
+                         (currentYear === periodStartYear && currentMonth === periodStartMonth && currentDay >= periodStartDay);
+      
+      var isBeforeEnd = (currentYear < periodEndYear) ||
+                        (currentYear === periodEndYear && currentMonth < periodEndMonth) ||
+                        (currentYear === periodEndYear && currentMonth === periodEndMonth && currentDay <= periodEndDay);
+      
+      if (isAfterStart && isBeforeEnd) {
+        var key = year + '-' + 
+                  (month < 10 ? '0' : '') + month + '-' + 
+                  (day < 10 ? '0' : '') + day;
+        if (result.indexOf(key) === -1) {
+          result.push(key);
+        }
       }
-      d.setDate(d.getDate() + 1);
     }
   }
   
