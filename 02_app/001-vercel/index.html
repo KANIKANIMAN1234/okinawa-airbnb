@@ -861,19 +861,27 @@
         document.getElementById('settingsError').textContent = '';
         document.getElementById('settingsMessage').textContent = '保存中...';
         try {
+          console.log('[設定保存] 開始');
           for (const k of TEMPLATE_KEYS) {
             const id = TEMPLATE_KEY_TO_ID[k];
             const el = document.getElementById(id);
-            if (el) await callGAS('saveTemplate', { key: k, body: el.value });
+            if (el) {
+              console.log('[設定保存] テンプレート保存:', k, el.value.substring(0, 50));
+              await callGAS('saveTemplate', { key: k, body: el.value });
+            }
           }
           for (const c of CONFIG_KEYS) {
             const el = document.getElementById(c.id);
             const val = el ? (el.type === 'number' ? String(el.value) : el.value) : '';
-            await callGAS('saveConfig', { lineUserId: profile.userId, key: c.key, value: val });
+            console.log('[設定保存] Config保存:', c.key, '=', val);
+            const result = await callGAS('saveConfig', { lineUserId: profile.userId, key: c.key, value: val });
+            console.log('[設定保存] Config保存結果:', c.key, result);
           }
+          console.log('[設定保存] 完了');
           document.getElementById('settingsMessage').textContent = '保存しました。';
         } catch (e) {
-          document.getElementById('settingsError').textContent = '保存に失敗しました。';
+          console.error('[設定保存] エラー:', e);
+          document.getElementById('settingsError').textContent = '保存に失敗しました: ' + e.message;
         }
         btn.disabled = false;
       }
