@@ -262,10 +262,17 @@ function getReservationsByGuest(guestLineUserId) {
   var data = sheet.getDataRange().getValues();
   var result = [];
   for (var i = 1; i < data.length; i++) {
-    if (data[i][1] !== guestLineUserId || data[i][7] !== '確定') continue;
+    var status = String(data[i][7] || '').trim();
+    if (data[i][1] !== guestLineUserId) continue;
+    if (status !== '確定' && status !== '確') continue;
     result.push({ 
+      reservationId: data[i][0],
       checkIn: formatDateAsString(data[i][2]), 
-      checkOut: formatDateAsString(data[i][3]) 
+      checkOut: formatDateAsString(data[i][3]),
+      numberOfGuests: Number(data[i][4]) || 0,
+      amount: Number(data[i][5]) || 0,
+      cleaningFee: Number(data[i][6]) || 0,
+      status: status
     });
   }
   return result;
@@ -307,15 +314,22 @@ function getAllReservationsWithDetails() {
   var data = sheet.getDataRange().getValues();
   var result = [];
   for (var i = 1; i < data.length; i++) {
-    if (data[i][7] !== '確定') continue;
+    var status = String(data[i][7] || '').trim();
+    if (status !== '確定' && status !== '確') continue;
     var checkInStr = String(data[i][2]).trim();
     var checkOutStr = String(data[i][3]).trim();
     if (!checkInStr || !checkOutStr) continue;
     var totalAmount = (Number(data[i][5]) || 0) + (Number(data[i][6]) || 0);
     result.push({
+      reservationId: data[i][0],
+      guestLineUserId: data[i][1],
       guestDisplayName: getGuestDisplayName(data[i][1]) || '(不明)',
       checkIn: formatDateAsString(data[i][2]),
       checkOut: formatDateAsString(data[i][3]),
+      numberOfGuests: Number(data[i][4]) || 0,
+      amount: Number(data[i][5]) || 0,
+      cleaningFee: Number(data[i][6]) || 0,
+      status: status,
       totalAmount: totalAmount
     });
   }

@@ -443,12 +443,16 @@
           return;
         }
         
-        const activeReservations = myReservations.filter(r => r.status === '確定');
+        const activeReservations = myReservations.filter(r => {
+          const status = String(r.status || '').trim();
+          return status === '確定' || status === '確' || status === 'confirmed';
+        });
         console.log('[予約一覧] activeReservations:', activeReservations);
+        console.log('[予約一覧] myReservations全件:', myReservations.map(r => ({ id: r.reservationId, status: r.status })));
         
         if (activeReservations.length === 0) {
           wrap.style.display = 'block';
-          list.innerHTML = '<li style="padding:12px; text-align:center; color:#666;">確定済みの予約がありません</li>';
+          list.innerHTML = '<li style="padding:12px; text-align:center; color:#666;">確定済みの予約がありません<br><small>※予約データ: ' + myReservations.length + '件</small></li>';
           return;
         }
         
