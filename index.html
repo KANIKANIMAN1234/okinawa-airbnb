@@ -536,7 +536,7 @@
           dayEl.className = className;
           dayEl.textContent = d;
           dayEl.dataset.date = key;
-          if (blocked && isAdmin && !isPast) {
+          if (blocked && isAdmin) {
             const detail = getReservationDetailForDate(key);
             console.log('[管理者] ' + key + ' の予約詳細:', detail);
             if (detail) {
