@@ -135,9 +135,9 @@
 * **保存例:** `{ "action": "saveConfig", "data": { "lineUserId": "Uxxxx", "key": "driveFolderId", "value": "1RkQ9..." } }`
 
 ### 5.3 空き状況取得（getAvailability）
-* **目的:** カレンダー画面で、Airbnb iCal を元にした「予約済み（ブロック）日」一覧を取得する。フロントはこの一覧を使って空き日のみ選択可能にする。
+* **目的:** カレンダー画面で、Airbnb iCal・LINE予約・予約禁止期間を元にした「予約済み（ブロック）日」一覧を取得する。フロントはこの一覧を使って空き日のみ選択可能にする。
 * **リクエスト例:** `{ "action": "getAvailability", "data": { "year": 2025, "month": 4 } }` または `{ "action": "getAvailability", "data": { "start": "2025-04-01", "end": "2025-06-30" } }`
-* **レスポンス:** `{ "status": "success", "result": { "blockedDates": ["2025-04-05", "2025-04-06", ...] } }`（iCal からパースした予約済み日の YYYY-MM-DD 配列）。空き日は「対象期間の全日から blockedDates を除いた日」としてフロントで算出する。
+* **レスポンス:** `{ "status": "success", "result": { "blockedDates": ["2025-04-05", "2025-04-06", ...] } }`（Airbnb iCal・LINE予約・予約禁止期間を統合したブロック日の YYYY-MM-DD 配列）。空き日は「対象期間の全日から blockedDates を除いた日」としてフロントで算出する。
 
 ### 5.4 料金設定取得（getPricing）
 * **目的:** 1泊単価・清掃代をフロントで総額計算するために取得する。
@@ -145,12 +145,35 @@
 * **レスポンス:** `{ "status": "success", "result": { "nightlyRate": 15000, "cleaningFee": 10000 } }`
 
 ### 5.5 予約確定（confirmReservation）
-* **目的:** カレンダー画面で「宿泊を確定させる」押下時に、選択内容を送信し、空き確認のうえ予約を保存。ゲスト・管理者に LINE 通知する。
+* **目的:** カレンダー画面で「宿泊を確定させる」押下時に、選択内容を送信し、空き確認のうえ予約を保存。ゲスト・管理者・清掃員グループに LINE 通知する。Googleカレンダーにも自動追加。
 * **リクエスト例:** `{ "action": "confirmReservation", "data": { "lineUserId": "Uxxxx", "displayName": "ゲスト名", "checkIn": "2025-05-01", "checkOut": "2025-05-03", "numberOfGuests": 2, "totalAmount": 40000 } }`
-* **レスポンス（成功）:** `{ "status": "success", "result": { "reservationId": "..." } }`
-* **レスポンス（失敗・例: 既に予約済み）:** `{ "status": "error", "message": "選択された期間は既に予約が入っています" }`
+* **レスポンス（成功）:** `{ "status": "success", "result": { "reservationId": "...", "lineNotifyGuest": true, "lineNotifyAdmin": true, "calendarAdded": true } }`
+* **レスポンス（失敗・例: 既に予約済みまたは予約禁止期間）:** `{ "status": "error", "message": "選択された期間は既に予約が入っているか、予約禁止期間です" }`
+* **LINE通知内容:** ゲストへの確認メッセージには、キャンセルポリシー（チェックイン日から逆算した具体的な日付とキャンセル料率：7日前50%、4日前80%、3日前100%）を自動計算して含める。
 
-### 5.6 通信プロトコル
+### 5.6 予約キャンセル（cancelReservation）
+* **目的:** ゲストが自分の予約をキャンセルする。
+* **リクエスト例:** `{ "action": "cancelReservation", "data": { "reservationId": "R123...", "lineUserId": "Uxxxx" } }`
+* **処理:** 
+  - 予約の所有者確認（`lineUserId`が一致するか）
+  - チェックイン日までの日数に応じてキャンセル料を計算（0%/50%/80%/100%）
+  - 予約ステータスを「キャンセル」に更新、キャンセル料を備考欄に記録
+  - Googleカレンダーから該当予約を削除
+  - ゲストと管理者にLINE通知
+* **レスポンス（成功）:** `{ "status": "success", "result": { "cancellationFee": 20000 } }`
+* **レスポンス（失敗）:** `{ "status": "error", "message": "予約が見つかりません" }`
+
+### 5.7 予約禁止期間の取得・保存（getBlockedPeriods / saveBlockedPeriods）
+* **目的:** 管理者が任意の期間を予約禁止に設定・削除する。
+* **取得リクエスト例:** `{ "action": "getBlockedPeriods", "data": { "lineUserId": "Uxxxx" } }`
+* **取得レスポンス:** `{ "status": "success", "result": { "periods": [{ "periodId": "BP123...", "startDate": "2026-07-01", "endDate": "2026-08-16", "reason": "メンテナンス" }] } }`
+* **保存リクエスト例:** `{ "action": "saveBlockedPeriods", "data": { "lineUserId": "Uxxxx", "periods": [...] } }`
+* **保存レスポンス:** `{ "status": "success" }`
+* **重要:** 予約禁止期間はLINEアプリ上でのみブロックされ、Googleカレンダーには追加されない（Airbnbには同期されない）。
+
+### 5.8 通信プロトコル
+
+### 5.9 通信プロトコル
 * **メソッド:** POST（action で上記各処理を切り替え）。
 * **Content-Type:** `application/json`
 * **文字コード:** UTF-8
