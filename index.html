@@ -239,6 +239,10 @@
           <label>アクセス案内（リッチメニュー「アクセスについて」）</label>
           <textarea id="accessInfo" placeholder="アクセスのご案内..."></textarea>
         </div>
+        <div class="form-row">
+          <label>ゴミ捨て方法（リッチメニュー「ゴミ捨て方法」）</label>
+          <textarea id="garbageDisposal" placeholder="ゴミ捨て方法のご案内..."></textarea>
+        </div>
         <button id="btnSaveSettings" class="btn btn-primary">設定を一括保存</button>
         <div id="settingsMessage" class="success-msg mb"></div>
         <div id="settingsError" class="error-msg mb"></div>
@@ -670,7 +674,7 @@
         btn.disabled = false;
       }
 
-      const TEMPLATE_KEYS = ['oneWeekBefore', 'reservationConfirm', 'restaurantGuide', 'replyMessage', 'facilityInfo', 'termsOfUse', 'contactPrompt', 'accessInfo'];
+      const TEMPLATE_KEYS = ['oneWeekBefore', 'reservationConfirm', 'restaurantGuide', 'replyMessage', 'facilityInfo', 'termsOfUse', 'contactPrompt', 'accessInfo', 'garbageDisposal'];
       const CONFIG_KEYS = [
         { key: 'driveFolderId', id: 'driveFolderId' },
         { key: 'airbnbIcalUrl', id: 'airbnbIcalUrl' },
@@ -682,7 +686,7 @@
         { key: 'doorVideoYoutubeUrl', id: 'doorVideoYoutubeUrl' },
         { key: 'cleanerLineGroupId', id: 'cleanerLineGroupId' }
       ];
-      const TEMPLATE_KEY_TO_ID = { oneWeekBefore: 'oneWeekBefore', reservationConfirm: 'reservationConfirm', restaurantGuide: 'restaurantGuide', replyMessage: 'replyMessage', facilityInfo: 'facilityInfo', termsOfUse: 'termsOfUse', contactPrompt: 'contactPrompt', accessInfo: 'accessInfo' };
+      const TEMPLATE_KEY_TO_ID = { oneWeekBefore: 'oneWeekBefore', reservationConfirm: 'reservationConfirm', restaurantGuide: 'restaurantGuide', replyMessage: 'replyMessage', facilityInfo: 'facilityInfo', termsOfUse: 'termsOfUse', contactPrompt: 'contactPrompt', accessInfo: 'accessInfo', garbageDisposal: 'garbageDisposal' };
 
       async function loadSettings() {
         if (!profile || !isAdmin) return;
