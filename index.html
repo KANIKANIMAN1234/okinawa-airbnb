@@ -515,15 +515,19 @@
           grid.appendChild(empty);
           cell++;
         }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         for (let d = 1; d <= last; d++) {
           const key = dateKey(currentYear, currentMonth, d);
-          const blocked = isBlocked(currentYear, currentMonth, d);
-          const myRes = blocked ? isMyReservation(key) : false;
+          const dayDate = new Date(currentYear, currentMonth - 1, d);
+          const isPast = dayDate < today;
+          const blocked = isBlocked(currentYear, currentMonth, d) || isPast;
+          const myRes = blocked && !isPast ? isMyReservation(key) : false;
           const dayEl = document.createElement('div');
           let className = 'cal-day ' + (blocked ? 'blocked' : 'available');
           if (myRes) {
             className += ' my-reservation';
-          } else if (blocked && isAdmin) {
+          } else if (blocked && isAdmin && !isPast) {
             const detail = getReservationDetailForDate(key);
             if (detail) {
               className += ' other-reservation';
@@ -532,7 +536,7 @@
           dayEl.className = className;
           dayEl.textContent = d;
           dayEl.dataset.date = key;
-          if (blocked && isAdmin) {
+          if (blocked && isAdmin && !isPast) {
             const detail = getReservationDetailForDate(key);
             console.log('[管理者] ' + key + ' の予約詳細:', detail);
             if (detail) {
@@ -542,7 +546,7 @@
               dayEl.style.cursor = 'pointer';
               dayEl.addEventListener('click', () => showAdminReservationModal(detail));
             }
-          } else if (!blocked) {
+          } else if (!blocked && !isPast) {
             dayEl.addEventListener('click', () => onDateClick(key));
           }
           grid.appendChild(dayEl);
