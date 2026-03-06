@@ -26,10 +26,16 @@
 * **管理者LINE User ID:** `config` シートに保持。問い合わせ着信通知・予約確定通知の送信先とする。
 * **ゲスト:** 上記以外の `userId`。問い合わせの保存・予約紐付け・各種案内メッセージの送信先とする。
 
-### 2.5 リッチメニューと自動応答（例：ゴミ捨て方法）
-* **想定:** リッチメニューに「ゴミ捨て方法」を配置し、タップ時にゴミ捨て方法の案内を自動で返信する。
-* **実装の受け口:** リッチメニューで「postback」アクションを指定し、data に `garbage_disposal` 等の識別子を設定する。ユーザーがタップすると、**同じ LINE Webhook** に `event.type === "postback"` のイベントが届く。
-* **処理:** Webhook の doPost 内で、`event.type` に応じて分岐する。`postback` かつ `event.postback.data === "garbage_disposal"` のとき、ゴミ捨て方法の文面（config または templates シートで管理）を取得し、Reply API でそのユーザーに返信する。問い合わせ保存・管理者通知は行わない。
+### 2.5 リッチメニューと自動応答
+* **想定:** リッチメニューに以下の項目を配置し、タップ時に対応する文面を自動で返信する。
+  - **施設情報:** 施設の概要・設備・Wi-Fiパスワード等
+  - **利用規約:** 宿泊施設の利用規約
+  - **メッセージで問い合わせ:** 問い合わせ方法の誘導文
+  - **アクセスについて:** 施設へのアクセス方法
+  - **ゴミ捨て方法:** ゴミの分別・捨て方の案内
+* **実装の受け口:** リッチメニューで「postback」アクションを指定し、data に `facilityInfo`、`termsOfUse`、`contactPrompt`、`accessInfo`、`garbageDisposal` 等の識別子を設定する。ユーザーがタップすると、**同じ LINE Webhook** に `event.type === "postback"` のイベントが届く。
+* **処理:** Webhook の doPost 内で、`event.type` に応じて分岐する。`postback` の場合、`event.postback.data` の値に応じて templates シートから対応する文面を取得し、Reply API でそのユーザーに返信する。問い合わせ保存・管理者通知は行わない。
+* **文面の管理:** すべてのリッチメニュー用文面は templates シートで管理し、**管理者が Vercel の設定画面から編集可能**。
 * **「Webhook と混在」について:** メッセージ受信（問い合わせ）と postback（リッチメニュー）は**どちらも LINE が同じ Webhook URL に送るイベント**であり、**1つの Webhook で event.type によって処理を分けるのは標準的な設計**で問題ない。混在を避けるべきなのは、後述の「LINE Webhook 用URL」と「Vercel 用API用URL」を同一エンドポイントにまとめることである。
 
 ---
@@ -48,10 +54,10 @@
 | 意味 | 推奨方針 |
 | :--- | :--- |
 | **LINE のイベントと Vercel からの API を同じ URL で受けない** | **推奨:** LINE Webhook 用の GAS デプロイ（URL-A）と、Vercel 用 API の GAS デプロイ（URL-B）を**分ける**。LINE の「Webhook URL」には URL-A のみを設定し、Vercel の環境変数には URL-B を設定する。これにより、LINE 署名検証は URL-A でのみ行い、URL-B には Vercel 以外が知らないURLとして API を公開する。 |
-| **メッセージと postback（リッチメニュー）を同じ Webhook で受けてもよいか** | **問題なし:** 1つの Webhook URL（URL-A）で、`event.type === "message"`（問い合わせ）と `event.type === "postback"`（ゴミ捨て方法タップ等）の**両方を処理してよい**。LINE はチャネルあたり 1 つの Webhook URL しか持てないため、メッセージも postback も同じ URL に届く。処理は doPost 内で `event.type` や `event.postback.data` で分岐し、関数ごとに整理する。 |
+| **メッセージと postback（リッチメニュー）を同じ Webhook で受けてもよいか** | **問題なし:** 1つの Webhook URL（URL-A）で、`event.type === "message"`（問い合わせ）と `event.type === "postback"`（リッチメニュー：施設情報・利用規約・アクセス案内・ゴミ捨て方法等）の**両方を処理してよい**。LINE はチャネルあたり 1 つの Webhook URL しか持てないため、メッセージも postback も同じ URL に届く。処理は doPost 内で `event.type` や `event.postback.data` で分岐し、関数ごとに整理する。 |
 
 **まとめ:**
-* **LINE Webhook 用 GAS（URL-A）:** 署名検証のうえ、`message` → 問い合わせ保存・管理者通知、`postback` → ゴミ捨て方法などの自動返信。**ここにリッチメニュー自動応答を追加するのは正しい設計。**
+* **LINE Webhook 用 GAS（URL-A）:** 署名検証のうえ、`message` → 問い合わせ保存・管理者通知、`postback` → リッチメニュー項目（施設情報・利用規約・アクセス案内・ゴミ捨て方法等）の自動返信。**ここにリッチメニュー自動応答を追加するのは正しい設計。**
 * **Vercel 用 API 用 GAS（URL-B）:** getAvailability, getPricing, confirmReservation, getTemplate, saveTemplate のみ。LINE の Webhook URL には設定しない。
 * 同一 GAS プロジェクトで doPost を 1 つにし、リクエストの形で「LINE か API か」を判別して分岐させる方式も可能だが、署名検証の扱いとセキュリティを明確にするため、**URL を 2 つに分ける運用を推奨**する。
 
@@ -187,6 +193,6 @@
 | 管理者通知 | ゲストが「予約したい」と送信 | 管理者LINEに問い合わせ内容が届く |
 | iCal 空き取得 | カレンダー画面で月を表示 | getAvailability でブロック日一覧が返り、空き日のみ選択可能になる |
 | 予約確定（Web） | カレンダーで日付・人数選択し「宿泊を確定させる」を押下 | 予約が保存され、ゲスト・管理者・清掃員グループのLINEに通知が届く |
-| リッチメニュー「ゴミ捨て方法」 | リッチメニューで「ゴミ捨て方法」をタップ | 同一 Webhook で postback を受信し、ゴミ捨て方法の文面を自動返信する |
+| リッチメニュー自動応答 | リッチメニューで「施設情報」「利用規約」「アクセスについて」「ゴミ捨て方法」等をタップ | 同一 Webhook で postback を受信し、templates シートから対応する文面を取得して自動返信する。文面は管理者が設定画面から編集可能 |
 | 管理者判定 | LIFF で設定画面を開く | isAdmin で true の場合のみ設定項目を表示 |
 | 月締め・PDF | 管理者が「○月を締める」実行、または毎月1日自動 | 対象月の売上を集計し、PDF を Drive の driveFolderId に保存 |

@@ -91,7 +91,11 @@
 | **reservationConfirm** | 予約確定時にゲストに送る御礼メッセージ |
 | **restaurantGuide** | 周辺のおすすめレストラン案内文 |
 | **replyMessage** | 問い合わせ等への返信用テンプレート |
-| **garbage_disposal** | ゴミ捨て方法（リッチメニュー用） |
+| **facilityInfo** | 施設情報（リッチメニュー用） |
+| **termsOfUse** | 利用規約（リッチメニュー用） |
+| **contactPrompt** | メッセージで問い合わせの誘導文（リッチメニュー用） |
+| **accessInfo** | アクセス案内（リッチメニュー用） |
+| **garbageDisposal** | ゴミ捨て方法（リッチメニュー用） |
 
 ---
 

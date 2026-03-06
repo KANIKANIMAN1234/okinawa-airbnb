@@ -42,6 +42,14 @@
 | **チェックインガイドPDFのURL** | チェックイン3日前に送るURL。config: `checkInGuidePdfUrl` | |
 | **宿泊1週間前の案内メッセージ** | templates: `oneWeekBefore` | 既存 |
 | **玄関ドアの開け方動画のURL** | チェックイン当日お昼に送るURL。config: `doorVideoYoutubeUrl` | |
+| **施設情報** | リッチメニュー「施設情報」の文面。templates: `facilityInfo` | |
+| **利用規約** | リッチメニュー「利用規約」の文面。templates: `termsOfUse` | |
+| **メッセージで問い合わせの誘導文** | リッチメニュー「メッセージで問い合わせ」の文面。templates: `contactPrompt` | |
+| **アクセス案内** | リッチメニュー「アクセスについて」の文面。templates: `accessInfo` | |
+| **ゴミ捨て方法** | リッチメニュー「ゴミ捨て方法」の文面。templates: `garbageDisposal` | |
+| **Airbnb iCal カレンダーURL** | 空き状況の取得元。config: `airbnbIcalUrl` | |
+| **GoogleカレンダーID** | LINE予約をAirbnbに同期するためのカレンダーID。config: `googleCalendarId` | |
+| **清掃員LINEグループID** | 予約確定時に通知を送るグループID。config: `cleanerLineGroupId` | |
 
 各項目はテキスト入力または数値入力とし、保存ボタンで GAS の API（saveConfig / saveTemplate）を呼び出して config または templates に保存する。
 
