@@ -105,6 +105,23 @@
 * **チェックインガイドPDF:** URLを `config` シートの `checkInGuidePdfUrl` で保持。GASからそのURLをゲストに送信する。
 * **玄関ドア動画（YouTube）:** URLを `config` シートの `doorVideoYoutubeUrl` で保持。チェックイン当日のお昼の通知で送信する。
 * **月間売上 PDF:** 各月締め時に、確定予約を集計して PDF を生成し、**Google Drive** の `config.driveFolderId` で指定したフォルダに保存する。フォルダID は管理者の LINE でアクセスした時のみ Vercel 画面で設定・変更可能。
+* **施設写真:** 管理者がアップロードした写真は、**Google Drive** の `photosFolderId`（スクリプトプロパティ）で指定したフォルダに保存される。写真のURL・表示順・説明文は `photos` シートで管理。画像表示には Google Drive のサムネイルURL（`https://drive.google.com/thumbnail?id=FILEID&sz=w1000`）を使用。
+
+---
+
+## 5.1 photos シート（施設写真管理）
+
+| 列名 | データ型 | 説明 | 例 |
+| :--- | :--- | :--- | :--- |
+| **photoId** | 文字列 | 写真の一意識別子 | P1234567890123 |
+| **imageUrl** | 文字列（URL） | Google Drive サムネイルURL | https://drive.google.com/thumbnail?id=xxx&sz=w1000 |
+| **displayOrder** | 数値 | 表示順序（昇順） | 0, 1, 2, ... |
+| **caption** | 文字列 | 写真の説明文（オプション） | リビングルーム |
+
+**運用:**
+- 管理者のみが写真のアップロード・並び替え・削除が可能。
+- 全ユーザーが写真ギャラリーを閲覧可能。
+- ドラッグ&ドロップで並び替え後、「並び順を保存」ボタンで `displayOrder` を更新。
 
 ---
 
