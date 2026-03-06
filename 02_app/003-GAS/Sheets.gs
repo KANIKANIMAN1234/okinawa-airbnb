@@ -378,3 +378,46 @@ function uploadPhotoToDrive(base64Data, fileName, mimeType) {
   var url = 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1000';
   return url;
 }
+
+function cancelReservation(reservationId, lineUserId) {
+  var sheet = getSheet(SHEET_NAMES.RESERVATIONS);
+  if (!sheet) return { success: false, message: 'シートが見つかりません' };
+  
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === reservationId) {
+      if (data[i][1] !== lineUserId) {
+        return { success: false, message: '他のユーザーの予約はキャンセルできません' };
+      }
+      
+      var checkInDate = new Date(data[i][2]);
+      var now = new Date();
+      var daysUntilCheckIn = Math.floor((checkInDate - now) / (24 * 60 * 60 * 1000));
+      
+      var cancellationFeeRate = 0;
+      if (daysUntilCheckIn < 3) {
+        cancellationFeeRate = 1.0;
+      } else if (daysUntilCheckIn < 4) {
+        cancellationFeeRate = 0.8;
+      } else if (daysUntilCheckIn < 7) {
+        cancellationFeeRate = 0.5;
+      }
+      
+      var totalAmount = (Number(data[i][5]) || 0) + (Number(data[i][6]) || 0);
+      var cancellationFee = Math.floor(totalAmount * cancellationFeeRate);
+      
+      sheet.getRange(i + 1, 8).setValue('キャンセル');
+      sheet.getRange(i + 1, 11).setValue('キャンセル日時: ' + new Date() + ', キャンセル料: ' + cancellationFee + '円');
+      
+      return {
+        success: true,
+        cancellationFee: cancellationFee,
+        cancellationFeeRate: cancellationFeeRate,
+        checkIn: data[i][2],
+        checkOut: data[i][3]
+      };
+    }
+  }
+  
+  return { success: false, message: '予約が見つかりません' };
+}

@@ -39,6 +39,7 @@
     .btn-primary { background: var(--line-green); color: #fff; }
     .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
     .btn-secondary { background: #666; color: #fff; margin-top: 8px; }
+    .btn-danger { background: #dc3545; color: #fff; }
 
     .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .calendar-nav button { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: #fff; cursor: pointer; font-size: 14px; }
@@ -58,6 +59,8 @@
 
     .admin-reservation-list { list-style: none; padding: 0; margin: 0; font-size: 13px; }
     .admin-reservation-list li { padding: 10px 12px; margin-bottom: 8px; background: #f5f5f5; border-radius: 8px; border-left: 4px solid var(--line-green); }
+    .my-reservation-list { list-style: none; padding: 0; margin: 0; font-size: 14px; }
+    .my-reservation-list li { padding: 12px; margin-bottom: 12px; background: #f8f9fa; border-radius: 8px; }
 
     .summary-box { background: #f9f9f9; padding: 12px; border-radius: 10px; margin: 12px 0; border: 1px solid var(--border); }
     .total-price { font-size: 20px; font-weight: bold; color: #333; text-align: center; margin: 10px 0; }
@@ -115,6 +118,10 @@
         <div id="adminReservationListWrap" class="admin-only mb" style="display:none;">
           <div class="section-title">予約一覧（全件・管理者用）</div>
           <ul id="adminReservationList" class="admin-reservation-list"></ul>
+        </div>
+        <div id="myReservationListWrap" class="mb" style="display:none;">
+          <div class="section-title">あなたの予約</div>
+          <ul id="myReservationList" class="my-reservation-list"></ul>
         </div>
         <div class="summary-box">
           <div>チェックイン: <span id="dispCheckIn">未選択</span></div>
@@ -407,6 +414,87 @@
         const r = await callGAS('getMyReservations', { lineUserId: profile.userId });
         myReservations = (r && r.result && r.result.reservations) ? r.result.reservations : [];
         showDebugInfo('自分の予約取得: ' + myReservations.length + '件 - ' + JSON.stringify(myReservations));
+        renderMyReservationList();
+      }
+      
+      function renderMyReservationList() {
+        const wrap = document.getElementById('myReservationListWrap');
+        const list = document.getElementById('myReservationList');
+        if (!myReservations || myReservations.length === 0) {
+          wrap.style.display = 'none';
+          return;
+        }
+        
+        const activeReservations = myReservations.filter(r => r.status === '確定');
+        if (activeReservations.length === 0) {
+          wrap.style.display = 'none';
+          return;
+        }
+        
+        wrap.style.display = 'block';
+        list.innerHTML = '';
+        
+        activeReservations.forEach(res => {
+          const li = document.createElement('li');
+          li.style.marginBottom = '12px';
+          li.style.padding = '12px';
+          li.style.background = '#f8f9fa';
+          li.style.borderRadius = '8px';
+          
+          const checkInDate = new Date(res.checkIn);
+          const now = new Date();
+          const daysUntil = Math.floor((checkInDate - now) / (24 * 60 * 60 * 1000));
+          
+          let cancellationFeeRate = 0;
+          if (daysUntil < 3) {
+            cancellationFeeRate = 1.0;
+          } else if (daysUntil < 4) {
+            cancellationFeeRate = 0.8;
+          } else if (daysUntil < 7) {
+            cancellationFeeRate = 0.5;
+          }
+          
+          const totalAmount = (Number(res.amount) || 0) + (Number(res.cleaningFee) || 0);
+          const cancellationFee = Math.floor(totalAmount * cancellationFeeRate);
+          
+          li.innerHTML = `
+            <div><strong>チェックイン:</strong> ${res.checkIn}</div>
+            <div><strong>チェックアウト:</strong> ${res.checkOut}</div>
+            <div><strong>宿泊人数:</strong> ${res.numberOfGuests}名</div>
+            <div><strong>金額:</strong> ${totalAmount.toLocaleString()}円</div>
+            <div style="margin-top:8px; font-size:12px; color:#666;">
+              キャンセル料: ${cancellationFee.toLocaleString()}円 (${cancellationFeeRate * 100}%)
+            </div>
+            <button class="btn btn-danger" style="margin-top:8px;" onclick="cancelReservation('${res.reservationId}')">予約をキャンセル</button>
+          `;
+          
+          list.appendChild(li);
+        });
+      }
+      
+      async function cancelReservation(reservationId) {
+        if (!confirm('本当にこの予約をキャンセルしますか？\nキャンセル料が発生する場合があります。')) {
+          return;
+        }
+        
+        try {
+          const result = await callGAS('cancelReservation', {
+            lineUserId: profile.userId,
+            reservationId: reservationId
+          });
+          
+          if (result && result.status === 'success') {
+            const fee = result.result.cancellationFee || 0;
+            const rate = (result.result.cancellationFeeRate || 0) * 100;
+            alert(`予約をキャンセルしました。\nキャンセル料: ${fee.toLocaleString()}円 (${rate}%)`);
+            await fetchMyReservations();
+            await renderCalendar();
+          } else {
+            alert('キャンセルに失敗しました: ' + (result && result.message || '不明なエラー'));
+          }
+        } catch (e) {
+          alert('キャンセル中にエラーが発生しました: ' + e.message);
+        }
       }
 
       function isMyReservation(key) {

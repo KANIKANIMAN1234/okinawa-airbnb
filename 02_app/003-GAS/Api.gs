@@ -36,6 +36,8 @@ function handleApiAction(action, data) {
         return apiSavePhotos(data);
       case 'uploadPhoto':
         return apiUploadPhoto(data);
+      case 'cancelReservation':
+        return apiCancelReservation(data);
       default:
         return { status: 'error', message: '不明な action: ' + action };
     }
@@ -162,6 +164,25 @@ function apiConfirmReservation(data) {
   var guestMsg = getTemplateBody('reservationConfirm') || 'ご予約ありがとうございます。当日はよろしくお願いいたします。';
   var restaurantGuide = getTemplateBody('restaurantGuide');
   if (restaurantGuide) guestMsg += '\n\n' + restaurantGuide;
+  
+  var checkInDate = new Date(checkIn);
+  var date50 = new Date(checkInDate);
+  date50.setDate(date50.getDate() - 7);
+  var date80 = new Date(checkInDate);
+  date80.setDate(date80.getDate() - 4);
+  var date100 = new Date(checkInDate);
+  date100.setDate(date100.getDate() - 3);
+  
+  var formatDate = function(d) {
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  };
+  
+  guestMsg += '\n\n【キャンセル規定のご案内】\nご予約後のキャンセルポリシー\n　1週間前：50%\n　4日前　：80%\n　3日前　：100%\n\n';
+  guestMsg += formatDate(date50) + '以降のキャンセル料は50%\n';
+  guestMsg += formatDate(date80) + '以降のキャンセル料は80%\n';
+  guestMsg += formatDate(date100) + '以降のキャンセル料は100%\n';
+  guestMsg += '（※キャンセル料は清掃代も含む）';
+  
   var lineNotifyGuest = pushToUser(lineUserId, guestMsg);
 
   var lineNotifyAdmin = true;
@@ -269,4 +290,43 @@ function apiUploadPhoto(data) {
   } catch (e) {
     return { status: 'error', message: e.message || String(e) };
   }
+}
+
+function apiCancelReservation(data) {
+  var lineUserId = data && data.lineUserId;
+  var reservationId = data && data.reservationId;
+  
+  if (!lineUserId || !reservationId) {
+    return { status: 'error', message: 'lineUserId と reservationId が必要です' };
+  }
+  
+  var result = cancelReservation(reservationId, lineUserId);
+  
+  if (!result.success) {
+    return { status: 'error', message: result.message };
+  }
+  
+  if (result.cancellationFee > 0) {
+    var adminId = getConfigValue('adminLineUserId');
+    if (adminId) {
+      var feeRateText = result.cancellationFeeRate === 1.0 ? '100%' : 
+                        result.cancellationFeeRate === 0.8 ? '80%' : 
+                        result.cancellationFeeRate === 0.5 ? '50%' : '0%';
+      var adminMsg = 'キャンセルが発生しました\n予約ID: ' + reservationId + 
+                     '\nチェックイン: ' + result.checkIn + 
+                     '\nキャンセル料率: ' + feeRateText + 
+                     '\nキャンセル料: ' + result.cancellationFee + '円';
+      pushToUser(adminId, adminMsg);
+    }
+  }
+  
+  removeReservationFromCalendar(reservationId, result.checkIn, result.checkOut);
+  
+  return {
+    status: 'success',
+    result: {
+      cancellationFee: result.cancellationFee,
+      cancellationFeeRate: result.cancellationFeeRate
+    }
+  };
 }
