@@ -485,20 +485,32 @@
           
           const guestNameHtml = isAdmin && res.guestDisplayName ? `<div><strong>ゲスト名:</strong> ${res.guestDisplayName}</div>` : '';
           
-          li.innerHTML = `
-            <div style="flex:1;">
-              ${guestNameHtml}
-              <div><strong>チェックイン:</strong> ${res.checkIn}</div>
-              <div><strong>チェックアウト:</strong> ${res.checkOut}</div>
-              <div><strong>宿泊人数:</strong> ${res.numberOfGuests}名</div>
-              <div><strong>金額:</strong> ${totalAmount.toLocaleString()}円</div>
-              <div style="margin-top:8px; font-size:12px; color:#666;">
-                キャンセル料: ${cancellationFee.toLocaleString()}円 (${cancellationFeeRate * 100}%)
-              </div>
+          const infoDiv = document.createElement('div');
+          infoDiv.style.flex = '1';
+          infoDiv.innerHTML = `
+            ${guestNameHtml}
+            <div><strong>チェックイン:</strong> ${res.checkIn}</div>
+            <div><strong>チェックアウト:</strong> ${res.checkOut}</div>
+            <div><strong>宿泊人数:</strong> ${res.numberOfGuests}名</div>
+            <div><strong>金額:</strong> ${totalAmount.toLocaleString()}円</div>
+            <div style="margin-top:8px; font-size:12px; color:#666;">
+              キャンセル料: ${cancellationFee.toLocaleString()}円 (${cancellationFeeRate * 100}%)
             </div>
-            <button class="btn btn-danger" style="padding:8px 16px; font-size:13px; width:auto; margin-left:12px; white-space:nowrap;" onclick="cancelReservation('${res.reservationId}')">予約をキャンセル</button>
           `;
           
+          const cancelBtn = document.createElement('button');
+          cancelBtn.className = 'btn btn-danger';
+          cancelBtn.style.padding = '8px 16px';
+          cancelBtn.style.fontSize = '13px';
+          cancelBtn.style.width = 'auto';
+          cancelBtn.style.marginLeft = '12px';
+          cancelBtn.style.whiteSpace = 'nowrap';
+          cancelBtn.style.alignSelf = 'flex-start';
+          cancelBtn.textContent = '予約をキャンセル';
+          cancelBtn.onclick = function() { cancelReservation(res.reservationId); };
+          
+          li.appendChild(infoDiv);
+          li.appendChild(cancelBtn);
           list.appendChild(li);
         });
       }
