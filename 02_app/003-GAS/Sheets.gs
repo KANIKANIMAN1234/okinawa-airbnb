@@ -8,7 +8,8 @@ var SHEET_NAMES = {
   GUESTS: 'guests',
   TEMPLATES: 'templates',
   CONFIG: 'config',
-  PHOTOS: 'photos'
+  PHOTOS: 'photos',
+  BLOCKED_PERIODS: 'blocked_periods'
 };
 
 function getSpreadsheet() {
@@ -434,4 +435,65 @@ function cancelReservation(reservationId, lineUserId) {
   }
   
   return { success: false, message: '予約が見つかりません' };
+}
+
+function getBlockedPeriods() {
+  var sheet = getSheet(SHEET_NAMES.BLOCKED_PERIODS);
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var result = [];
+  for (var i = 1; i < data.length; i++) {
+    if (!data[i][0] || !data[i][1] || !data[i][2]) continue;
+    result.push({
+      periodId: data[i][0],
+      startDate: formatDateAsString(data[i][1]),
+      endDate: formatDateAsString(data[i][2]),
+      reason: data[i][3] || ''
+    });
+  }
+  return result;
+}
+
+function saveBlockedPeriods(periods) {
+  var sheet = getSheet(SHEET_NAMES.BLOCKED_PERIODS);
+  if (!sheet) return false;
+  sheet.clear();
+  sheet.appendRow(['periodId', 'startDate', 'endDate', 'reason']);
+  for (var i = 0; i < periods.length; i++) {
+    var p = periods[i];
+    sheet.appendRow([
+      p.periodId || 'BP' + new Date().getTime() + '_' + i,
+      p.startDate || '',
+      p.endDate || '',
+      p.reason || ''
+    ]);
+  }
+  return true;
+}
+
+function getBlockedDateKeysFromPeriods(year, month) {
+  var periods = getBlockedPeriods();
+  var result = [];
+  var startOfMonth = new Date(year, month - 1, 1);
+  var endOfMonth = new Date(year, month, 0);
+  
+  for (var i = 0; i < periods.length; i++) {
+    var periodStart = new Date(periods[i].startDate);
+    var periodEnd = new Date(periods[i].endDate);
+    
+    var d = new Date(Math.max(periodStart.getTime(), startOfMonth.getTime()));
+    var end = new Date(Math.min(periodEnd.getTime(), endOfMonth.getTime()));
+    
+    while (d <= end) {
+      var key = d.getFullYear() + '-' + 
+                (d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1) + '-' + 
+                (d.getDate() < 10 ? '0' : '') + d.getDate();
+      if (result.indexOf(key) === -1) {
+        result.push(key);
+      }
+      d.setDate(d.getDate() + 1);
+    }
+  }
+  
+  return result;
 }

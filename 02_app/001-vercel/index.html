@@ -249,6 +249,25 @@
         <button id="btnSaveSettings" class="btn btn-primary">設定を一括保存</button>
         <div id="settingsMessage" class="success-msg mb"></div>
         <div id="settingsError" class="error-msg mb"></div>
+        
+        <div class="section-title">予約禁止期間設定</div>
+        <div id="blockedPeriodsList" style="margin-bottom:12px;"></div>
+        <div class="form-row">
+          <label>開始日</label>
+          <input type="date" id="blockStartDate">
+        </div>
+        <div class="form-row">
+          <label>終了日</label>
+          <input type="date" id="blockEndDate">
+        </div>
+        <div class="form-row">
+          <label>理由（オプション）</label>
+          <input type="text" id="blockReason" placeholder="メンテナンス、プライベート利用など">
+        </div>
+        <button id="btnAddBlockedPeriod" class="btn btn-secondary">予約禁止期間を追加</button>
+        <div id="blockedPeriodsMessage" class="success-msg mb"></div>
+        <div id="blockedPeriodsError" class="error-msg mb"></div>
+        
         <div class="section-title">月締め・PDF出力</div>
         <div class="form-row">
           <label>対象月</label>
@@ -278,6 +297,7 @@
       let selectedCheckIn = null;
       let selectedCheckOut = null;
       let photos = [];
+      let blockedPeriods = [];
       let draggedPhotoIndex = null;
 
       async function callGAS(action, data) {
@@ -378,6 +398,7 @@
         document.getElementById('btnCloseMonth').addEventListener('click', doCloseMonth);
         document.getElementById('btnAddPhoto').addEventListener('click', addPhoto);
         document.getElementById('btnSavePhotos').addEventListener('click', savePhotos);
+        document.getElementById('btnAddBlockedPeriod').addEventListener('click', addBlockedPeriod);
       }
 
       function initCalendar() {
@@ -830,6 +851,7 @@
           const el = document.getElementById(c.id);
           if (el) el.value = (r && r.result && r.result.value !== undefined) ? r.result.value : '';
         }
+        await loadBlockedPeriods();
       }
 
       async function saveAllSettings() {
@@ -854,6 +876,117 @@
           document.getElementById('settingsError').textContent = '保存に失敗しました。';
         }
         btn.disabled = false;
+      }
+
+      async function loadBlockedPeriods() {
+        if (!profile || !isAdmin) return;
+        const r = await callGAS('getBlockedPeriods', { lineUserId: profile.userId });
+        blockedPeriods = (r && r.result && r.result.periods) ? r.result.periods : [];
+        renderBlockedPeriodsList();
+      }
+      
+      function renderBlockedPeriodsList() {
+        const list = document.getElementById('blockedPeriodsList');
+        if (!list) return;
+        
+        if (blockedPeriods.length === 0) {
+          list.innerHTML = '<div style="padding:12px; background:#f8f9fa; border-radius:8px; text-align:center; color:#666;">予約禁止期間が設定されていません</div>';
+          return;
+        }
+        
+        list.innerHTML = '';
+        blockedPeriods.forEach((period, index) => {
+          const div = document.createElement('div');
+          div.style.padding = '12px';
+          div.style.background = '#fff3cd';
+          div.style.borderRadius = '8px';
+          div.style.marginBottom = '8px';
+          div.style.display = 'flex';
+          div.style.justifyContent = 'space-between';
+          div.style.alignItems = 'center';
+          
+          const info = document.createElement('div');
+          info.innerHTML = `
+            <strong>${period.startDate} 〜 ${period.endDate}</strong>
+            ${period.reason ? '<br><small style="color:#666;">' + period.reason + '</small>' : ''}
+          `;
+          
+          const deleteBtn = document.createElement('button');
+          deleteBtn.textContent = '削除';
+          deleteBtn.style.padding = '6px 12px';
+          deleteBtn.style.fontSize = '12px';
+          deleteBtn.style.background = '#dc3545';
+          deleteBtn.style.color = '#fff';
+          deleteBtn.style.border = 'none';
+          deleteBtn.style.borderRadius = '4px';
+          deleteBtn.style.cursor = 'pointer';
+          deleteBtn.onclick = function() { deleteBlockedPeriod(index); };
+          
+          div.appendChild(info);
+          div.appendChild(deleteBtn);
+          list.appendChild(div);
+        });
+      }
+      
+      async function addBlockedPeriod() {
+        const startDate = document.getElementById('blockStartDate').value;
+        const endDate = document.getElementById('blockEndDate').value;
+        const reason = document.getElementById('blockReason').value.trim();
+        
+        if (!startDate || !endDate) {
+          alert('開始日と終了日を選択してください。');
+          return;
+        }
+        
+        if (new Date(startDate) > new Date(endDate)) {
+          alert('終了日は開始日以降を選択してください。');
+          return;
+        }
+        
+        blockedPeriods.push({
+          periodId: 'BP' + Date.now(),
+          startDate: startDate,
+          endDate: endDate,
+          reason: reason
+        });
+        
+        await saveBlockedPeriodsToGAS();
+        
+        document.getElementById('blockStartDate').value = '';
+        document.getElementById('blockEndDate').value = '';
+        document.getElementById('blockReason').value = '';
+        
+        renderBlockedPeriodsList();
+        renderCalendar();
+      }
+      
+      async function deleteBlockedPeriod(index) {
+        if (!confirm('この予約禁止期間を削除しますか？')) return;
+        
+        blockedPeriods.splice(index, 1);
+        await saveBlockedPeriodsToGAS();
+        renderBlockedPeriodsList();
+        renderCalendar();
+      }
+      
+      async function saveBlockedPeriodsToGAS() {
+        try {
+          const result = await callGAS('saveBlockedPeriods', {
+            lineUserId: profile.userId,
+            periods: blockedPeriods
+          });
+          
+          if (result && result.status === 'success') {
+            document.getElementById('blockedPeriodsMessage').textContent = '保存しました';
+            setTimeout(() => {
+              document.getElementById('blockedPeriodsMessage').textContent = '';
+            }, 3000);
+          } else {
+            document.getElementById('blockedPeriodsError').textContent = '保存に失敗しました';
+          }
+        } catch (e) {
+          document.getElementById('blockedPeriodsError').textContent = 'エラー: ' + e.message;
+        }
       }
 
       async function doCloseMonth() {

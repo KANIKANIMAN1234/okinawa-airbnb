@@ -38,6 +38,10 @@ function handleApiAction(action, data) {
         return apiUploadPhoto(data);
       case 'cancelReservation':
         return apiCancelReservation(data);
+      case 'getBlockedPeriods':
+        return apiGetBlockedPeriods(data);
+      case 'saveBlockedPeriods':
+        return apiSaveBlockedPeriods(data);
       default:
         return { status: 'error', message: '不明な action: ' + action };
     }
@@ -113,6 +117,10 @@ function apiGetAvailability(data) {
     for (var i = 0; i < fromSheets.length; i++) {
       if (blocked.indexOf(fromSheets[i]) === -1) blocked.push(fromSheets[i]);
     }
+    var fromBlockedPeriods = getBlockedDateKeysFromPeriods(parseInt(year, 10), parseInt(month, 10));
+    for (var j = 0; j < fromBlockedPeriods.length; j++) {
+      if (blocked.indexOf(fromBlockedPeriods[j]) === -1) blocked.push(fromBlockedPeriods[j]);
+    }
   }
   return { status: 'success', result: { blockedDates: blocked } };
 }
@@ -133,18 +141,35 @@ function apiConfirmReservation(data) {
   if (!lineUserId || !checkIn || !checkOut) {
     return { status: 'error', message: 'lineUserId, checkIn, checkOut は必須です' };
   }
+  var startDate = new Date(checkIn);
+  var endDate = new Date(checkOut);
+  var allBlocked = [];
+  
   var icalUrl = getConfigValue('airbnbIcalUrl');
   if (icalUrl) {
-    var startDate = new Date(checkIn);
-    var endDate = new Date(checkOut);
     var blocked = getBlockedDatesInRange(icalUrl, startDate, endDate);
-    var d = new Date(checkIn);
-    while (d < endDate) {
+    allBlocked = allBlocked.concat(blocked);
+  }
+  
+  var periods = getBlockedPeriods();
+  for (var p = 0; p < periods.length; p++) {
+    var periodStart = new Date(periods[p].startDate);
+    var periodEnd = new Date(periods[p].endDate);
+    var d = new Date(Math.max(startDate.getTime(), periodStart.getTime()));
+    var end = new Date(Math.min(endDate.getTime(), periodEnd.getTime()));
+    while (d < end) {
       var key = d.getFullYear() + '-' + (d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1) + '-' + (d.getDate() < 10 ? '0' : '') + d.getDate();
-      if (blocked.indexOf(key) !== -1)
-        return { status: 'error', message: '選択された期間は既に予約が入っています' };
+      if (allBlocked.indexOf(key) === -1) allBlocked.push(key);
       d.setDate(d.getDate() + 1);
     }
+  }
+  
+  var d = new Date(checkIn);
+  while (d < endDate) {
+    var key = d.getFullYear() + '-' + (d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1) + '-' + (d.getDate() < 10 ? '0' : '') + d.getDate();
+    if (allBlocked.indexOf(key) !== -1)
+      return { status: 'error', message: '選択された期間は既に予約が入っているか、予約禁止期間です' };
+    d.setDate(d.getDate() + 1);
   }
   var nightlyRate = parseInt(getConfigValue('nightlyRate') || '0', 10) || 15000;
   var cleaningFee = parseInt(getConfigValue('cleaningFee') || '0', 10) || 10000;
@@ -329,4 +354,35 @@ function apiCancelReservation(data) {
       cancellationFeeRate: result.cancellationFeeRate
     }
   };
+}
+
+function apiGetBlockedPeriods(data) {
+  var lineUserId = data && data.lineUserId;
+  var adminId = getConfigValue('adminLineUserId');
+  if (!adminId || adminId !== lineUserId) {
+    return { status: 'error', message: '管理者のみ利用できます' };
+  }
+  
+  var periods = getBlockedPeriods();
+  return { status: 'success', result: { periods: periods } };
+}
+
+function apiSaveBlockedPeriods(data) {
+  var lineUserId = data && data.lineUserId;
+  var adminId = getConfigValue('adminLineUserId');
+  if (!adminId || adminId !== lineUserId) {
+    return { status: 'error', message: '管理者のみ利用できます' };
+  }
+  
+  var periods = data && data.periods;
+  if (!periods || !Array.isArray(periods)) {
+    return { status: 'error', message: 'periods が必要です' };
+  }
+  
+  var success = saveBlockedPeriods(periods);
+  if (success) {
+    return { status: 'success' };
+  } else {
+    return { status: 'error', message: '保存に失敗しました' };
+  }
 }
