@@ -1,3 +1,13 @@
 # 設定（機密情報を含むためコミットしない）
 config.js
 node_modules/
+
+# 02_app フォルダ以外は無視（Vercel用ファイルは除く）
+/00_prompt/
+/08_収支計算app_PJ/
+/photo/
+/*.mp4
+/*.png
+/*.jpg
+/*.jpeg
+/*.pdf
