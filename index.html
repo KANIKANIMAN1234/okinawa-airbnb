@@ -739,7 +739,10 @@
         if (r && r.status === 'success' && r.result && r.result.photos) {
           photos = r.result.photos;
           renderPhotoGallery();
-          if (isAdmin) renderPhotoManagement();
+          if (isAdmin) {
+            document.getElementById('photoManagement').style.display = 'block';
+            renderPhotoManagement();
+          }
         }
       }
 
