@@ -70,6 +70,21 @@
     .modal-box { background: #fff; border-radius: 12px; padding: 20px; max-width: 400px; width: 100%; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
     .modal-box p { margin: 0 0 12px; line-height: 1.6; font-size: 14px; white-space: pre-line; }
     .modal-close { display: block; width: 100%; padding: 12px; margin-top: 12px; border-radius: 8px; border: none; background: var(--line-green); color: #fff; font-weight: bold; cursor: pointer; font-size: 14px; }
+    
+    .photo-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .photo-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .photo-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+    .photo-caption { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: #fff; padding: 4px 8px; font-size: 11px; }
+    
+    .photo-list { margin-top: 16px; }
+    .photo-list-item { display: flex; align-items: center; gap: 12px; padding: 12px; background: #f9f9f9; border-radius: 8px; margin-bottom: 8px; cursor: move; }
+    .photo-list-item img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+    .photo-list-item-info { flex: 1; }
+    .photo-list-item-info input { width: 100%; padding: 6px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; margin-top: 4px; }
+    .photo-list-item-actions { display: flex; gap: 8px; }
+    .photo-list-item-actions button { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; }
+    .btn-delete { background: var(--error); color: #fff; }
+    .drag-handle { cursor: move; font-size: 18px; color: #999; }
   </style>
 </head>
 <body>
@@ -78,6 +93,7 @@
     <div id="appArea" style="display:none;">
       <div class="tabs">
         <div id="tabBooking" class="tab active" data-page="booking">予約</div>
+        <div id="tabPhotos" class="tab" data-page="photos">写真</div>
         <div id="tabSettings" class="tab admin-only" data-page="settings">設定</div>
       </div>
       <div id="pageBooking" class="page active">
@@ -131,6 +147,24 @@
           <p id="guestNoticeTitle"><strong>ご確認ください（4名以上の場合）</strong></p>
           <p id="guestNoticeBody">セミダブルベットが3台です。&#10;最大6名まで宿泊可能ですが、大人6名だと狭いです。&#10;大人2名、お子様4名程度が好ましいです。&#10;&#10;宿泊人数、部屋の間取りなど、必ず確認をしてから宿泊予約をしてください。</p>
           <button type="button" id="guestNoticeClose" class="modal-close">閉じる</button>
+        </div>
+      </div>
+      <div id="pagePhotos" class="page">
+        <div class="section-title">施設の写真</div>
+        <div id="photoGallery" class="photo-gallery"></div>
+        <div id="photoManagement" class="admin-only" style="display:none;">
+          <div class="section-title">写真管理（管理者用）</div>
+          <div class="form-row">
+            <label>写真URL</label>
+            <input type="url" id="newPhotoUrl" placeholder="https://...">
+          </div>
+          <div class="form-row">
+            <label>説明文（オプション）</label>
+            <input type="text" id="newPhotoCaption" placeholder="リビングルーム">
+          </div>
+          <button type="button" id="btnAddPhoto" class="btn btn-primary">写真を追加</button>
+          <div id="photoList" class="photo-list"></div>
+          <button type="button" id="btnSavePhotos" class="btn btn-secondary" style="display:none;">並び順を保存</button>
         </div>
       </div>
       <div id="pageSettings" class="page">
@@ -231,6 +265,8 @@
       let pricing = { nightlyRate: 0, cleaningFee: 0 };
       let selectedCheckIn = null;
       let selectedCheckOut = null;
+      let photos = [];
+      let draggedPhotoIndex = null;
 
       async function callGAS(action, data) {
         const res = await fetch(GAS_URL, {
@@ -302,8 +338,10 @@
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             tab.classList.add('active');
-            document.getElementById('page' + (page === 'booking' ? 'Booking' : 'Settings')).classList.add('active');
+            const pageId = page === 'booking' ? 'Booking' : page === 'photos' ? 'Photos' : 'Settings';
+            document.getElementById('page' + pageId).classList.add('active');
             if (page === 'settings') loadSettings();
+            if (page === 'photos') loadPhotos();
           });
         });
         document.getElementById('prevMonth').addEventListener('click', () => { currentMonth--; if (currentMonth < 1) { currentMonth = 12; currentYear--; } renderCalendar(); });
@@ -328,6 +366,8 @@
         });
         document.getElementById('btnSaveSettings').addEventListener('click', saveAllSettings);
         document.getElementById('btnCloseMonth').addEventListener('click', doCloseMonth);
+        document.getElementById('btnAddPhoto').addEventListener('click', addPhoto);
+        document.getElementById('btnSavePhotos').addEventListener('click', savePhotos);
       }
 
       function initCalendar() {
@@ -687,6 +727,132 @@
           }
         } catch (e) {
           document.getElementById('closeMonthError').textContent = '通信エラーです。';
+        }
+      }
+
+      async function loadPhotos() {
+        const r = await callGAS('getPhotos', {});
+        if (r && r.status === 'success' && r.result && r.result.photos) {
+          photos = r.result.photos;
+          renderPhotoGallery();
+          if (isAdmin) renderPhotoManagement();
+        }
+      }
+
+      function renderPhotoGallery() {
+        const gallery = document.getElementById('photoGallery');
+        if (!gallery) return;
+        if (photos.length === 0) {
+          gallery.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">写真がまだ登録されていません。</p>';
+          return;
+        }
+        gallery.innerHTML = photos.map(p => 
+          '<div class="photo-item"><img src="' + escapeHtml(p.imageUrl) + '" alt="' + escapeHtml(p.caption || '') + '" onclick="window.open(\'' + escapeHtml(p.imageUrl) + '\', \'_blank\')"><div class="photo-caption">' + escapeHtml(p.caption || '') + '</div></div>'
+        ).join('');
+      }
+
+      function renderPhotoManagement() {
+        const list = document.getElementById('photoList');
+        if (!list) return;
+        if (photos.length === 0) {
+          list.innerHTML = '';
+          document.getElementById('btnSavePhotos').style.display = 'none';
+          return;
+        }
+        list.innerHTML = photos.map((p, idx) => 
+          '<div class="photo-list-item" draggable="true" data-index="' + idx + '"><span class="drag-handle">☰</span><img src="' + escapeHtml(p.imageUrl) + '"><div class="photo-list-item-info"><div style="font-size:11px; color:#666;">URL: ' + escapeHtml(p.imageUrl) + '</div><input type="text" value="' + escapeHtml(p.caption || '') + '" placeholder="説明文" data-index="' + idx + '"></div><div class="photo-list-item-actions"><button class="btn-delete" data-index="' + idx + '">削除</button></div></div>'
+        ).join('');
+        document.getElementById('btnSavePhotos').style.display = 'block';
+        
+        document.querySelectorAll('.photo-list-item').forEach(item => {
+          item.addEventListener('dragstart', handleDragStart);
+          item.addEventListener('dragover', handleDragOver);
+          item.addEventListener('drop', handleDrop);
+          item.addEventListener('dragend', handleDragEnd);
+        });
+        
+        document.querySelectorAll('.photo-list-item-info input').forEach(input => {
+          input.addEventListener('change', function() {
+            const idx = parseInt(this.dataset.index, 10);
+            photos[idx].caption = this.value;
+          });
+        });
+        
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const idx = parseInt(this.dataset.index, 10);
+            if (confirm('この写真を削除しますか？')) {
+              photos.splice(idx, 1);
+              renderPhotoGallery();
+              renderPhotoManagement();
+            }
+          });
+        });
+      }
+
+      function handleDragStart(e) {
+        draggedPhotoIndex = parseInt(e.target.dataset.index, 10);
+        e.target.style.opacity = '0.5';
+      }
+
+      function handleDragOver(e) {
+        e.preventDefault();
+        return false;
+      }
+
+      function handleDrop(e) {
+        e.preventDefault();
+        const targetIndex = parseInt(e.target.closest('.photo-list-item').dataset.index, 10);
+        if (draggedPhotoIndex !== null && draggedPhotoIndex !== targetIndex) {
+          const draggedItem = photos[draggedPhotoIndex];
+          photos.splice(draggedPhotoIndex, 1);
+          photos.splice(targetIndex, 0, draggedItem);
+          photos.forEach((p, idx) => p.displayOrder = idx);
+          renderPhotoGallery();
+          renderPhotoManagement();
+        }
+        return false;
+      }
+
+      function handleDragEnd(e) {
+        e.target.style.opacity = '1';
+        draggedPhotoIndex = null;
+      }
+
+      async function addPhoto() {
+        const url = document.getElementById('newPhotoUrl').value.trim();
+        const caption = document.getElementById('newPhotoCaption').value.trim();
+        if (!url) {
+          alert('写真URLを入力してください。');
+          return;
+        }
+        const newPhoto = {
+          photoId: 'P' + Date.now(),
+          imageUrl: url,
+          displayOrder: photos.length,
+          caption: caption
+        };
+        photos.push(newPhoto);
+        document.getElementById('newPhotoUrl').value = '';
+        document.getElementById('newPhotoCaption').value = '';
+        renderPhotoGallery();
+        renderPhotoManagement();
+      }
+
+      async function savePhotos() {
+        if (!profile || !profile.userId) return;
+        try {
+          const r = await callGAS('savePhotos', {
+            lineUserId: profile.userId,
+            photos: photos
+          });
+          if (r && r.status === 'success') {
+            alert('写真を保存しました。');
+          } else {
+            alert(r && r.message ? r.message : '保存に失敗しました。');
+          }
+        } catch (e) {
+          alert('通信エラーです。');
         }
       }
 
