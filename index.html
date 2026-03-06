@@ -420,14 +420,21 @@
       function renderMyReservationList() {
         const wrap = document.getElementById('myReservationListWrap');
         const list = document.getElementById('myReservationList');
+        
+        console.log('[予約一覧] myReservations:', myReservations);
+        
         if (!myReservations || myReservations.length === 0) {
-          wrap.style.display = 'none';
+          wrap.style.display = 'block';
+          list.innerHTML = '<li style="padding:12px; text-align:center; color:#666;">予約がありません</li>';
           return;
         }
         
         const activeReservations = myReservations.filter(r => r.status === '確定');
+        console.log('[予約一覧] activeReservations:', activeReservations);
+        
         if (activeReservations.length === 0) {
-          wrap.style.display = 'none';
+          wrap.style.display = 'block';
+          list.innerHTML = '<li style="padding:12px; text-align:center; color:#666;">確定済みの予約がありません</li>';
           return;
         }
         
