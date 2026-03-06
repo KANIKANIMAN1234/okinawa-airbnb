@@ -30,7 +30,17 @@ function pushToUser(userId, text) {
 
 function pushToGroup(groupId, text) {
   var token = getChannelAccessToken();
-  if (!token || !groupId) return;
+  Logger.log('[pushToGroup] 開始 - groupId: ' + groupId + ', text: ' + text);
+  
+  if (!token) {
+    Logger.log('[pushToGroup] エラー: Channel Access Token が設定されていません');
+    return false;
+  }
+  if (!groupId) {
+    Logger.log('[pushToGroup] エラー: groupId が指定されていません');
+    return false;
+  }
+  
   var url = 'https://api.line.me/v2/bot/message/push';
   var payload = {
     to: groupId,
@@ -43,7 +53,26 @@ function pushToGroup(groupId, text) {
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
-  UrlFetchApp.fetch(url, options);
+  
+  try {
+    var res = UrlFetchApp.fetch(url, options);
+    var code = res.getResponseCode();
+    var responseText = res.getContentText();
+    
+    Logger.log('[pushToGroup] レスポンスコード: ' + code);
+    Logger.log('[pushToGroup] レスポンス内容: ' + responseText);
+    
+    if (code < 200 || code >= 300) {
+      Logger.log('[pushToGroup] エラー: LINE API がエラーを返しました');
+      return false;
+    }
+    
+    Logger.log('[pushToGroup] 成功: グループへの通知送信完了');
+    return true;
+  } catch (e) {
+    Logger.log('[pushToGroup] 例外エラー: ' + e.message);
+    return false;
+  }
 }
 
 function replyToReplyToken(replyToken, text) {

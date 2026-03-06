@@ -242,9 +242,15 @@ function apiConfirmReservation(data) {
   }
 
   var cleanerGroupId = getConfigValue('cleanerLineGroupId');
+  var cleanerNotifySent = false;
+  Logger.log('[予約確定] 清掃員グループID: ' + cleanerGroupId);
   if (cleanerGroupId) {
     var cleanerMsg = checkIn + '〜' + checkOut + ' 予約確定。チェックアウト ' + checkOut + '。清掃よろしくお願いします。';
-    pushToGroup(cleanerGroupId, cleanerMsg);
+    Logger.log('[予約確定] 清掃員グループへメッセージ送信開始');
+    cleanerNotifySent = pushToGroup(cleanerGroupId, cleanerMsg);
+    Logger.log('[予約確定] 清掃員グループへの送信結果: ' + cleanerNotifySent);
+  } else {
+    Logger.log('[予約確定] 清掃員グループIDが設定されていません');
   }
 
   var calendarAdded = addReservationToCalendar(reservationId, checkIn, checkOut, displayName || '', numberOfGuests);
@@ -255,6 +261,7 @@ function apiConfirmReservation(data) {
       reservationId: reservationId,
       lineNotifyGuest: lineNotifyGuest,
       lineNotifyAdmin: lineNotifyAdmin,
+      cleanerNotifySent: cleanerNotifySent,
       calendarAdded: calendarAdded
     }
   };
