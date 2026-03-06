@@ -841,7 +841,7 @@
         try {
           const base64Data = await fileToBase64(file);
           const uploadRes = await callGAS('uploadPhoto', {
-            lineUserId: currentUserId,
+            lineUserId: profile.userId,
             base64Data: base64Data,
             fileName: file.name,
             mimeType: file.type
