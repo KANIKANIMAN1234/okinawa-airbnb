@@ -75,6 +75,23 @@
 * **予約確定時:** confirmReservation 処理の一環で、管理者の LINE への通知に加え、`cleanerLineGroupId` が設定されていれば、同じ内容（または清掃向けの要約）を Push API の `to: cleanerLineGroupId` で送信する。
 * **注意:** オープンチャットでグループID が取得・送信可能かは LINE の仕様に依存する。通常のグループトークでは利用可能。オープンチャットでもボットを追加したうえでグループID が取得できる場合に本機能を利用する。
 
+### 3.5 Googleカレンダー連携（LINE予約のAirbnb自動同期）
+* **要件:** LINE予約をGoogleカレンダーに自動追加し、GoogleカレンダーのiCal URLをAirbnbに登録することで、Airbnbへの手動ブロック作業を自動化する。
+* **設定:** 
+  - Googleカレンダーで新しいカレンダーを作成し、カレンダーIDを取得
+  - カレンダーを一般公開し、iCal形式の公開URLを取得
+  - GASのスクリプトプロパティまたはconfigシートの`googleCalendarId`にカレンダーIDを保存
+  - AirbnbのカレンダーインポートでGoogleカレンダーのiCal URLを登録
+* **動作:**
+  - LINE予約確定時（`confirmReservation`）に、`CalendarApp.getCalendarById(googleCalendarId)`でカレンダーを取得
+  - `createAllDayEvent()`でチェックイン〜チェックアウトの全日イベントを作成
+  - イベントの説明欄に予約ID、宿泊人数、チェックイン/アウト日を記載
+  - Airbnbは数時間ごとにiCalを読み込み、自動的に該当期間をブロック
+* **注意:**
+  - Googleカレンダー→Airbnbの同期には数時間のタイムラグがあるため、予約直後は手動確認を推奨
+  - 予約キャンセル時のカレンダー削除機能は将来実装予定
+  - カレンダーの公開範囲に注意（iCal URLを知っている人は閲覧可能）
+
 ---
 
 ## 4. Vercel・GitHub 連携
