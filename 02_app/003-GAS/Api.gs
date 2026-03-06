@@ -177,12 +177,15 @@ function apiConfirmReservation(data) {
     pushToGroup(cleanerGroupId, cleanerMsg);
   }
 
+  var calendarAdded = addReservationToCalendar(reservationId, checkIn, checkOut, displayName || '', numberOfGuests);
+
   return {
     status: 'success',
     result: {
       reservationId: reservationId,
       lineNotifyGuest: lineNotifyGuest,
-      lineNotifyAdmin: lineNotifyAdmin
+      lineNotifyAdmin: lineNotifyAdmin,
+      calendarAdded: calendarAdded
     }
   };
 }

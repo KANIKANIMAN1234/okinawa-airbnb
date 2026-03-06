@@ -178,6 +178,11 @@
           <input type="url" id="airbnbIcalUrl" placeholder="https://www.airbnb.jp/calendar/ical/xxxxx.ics?t=xxxxx">
         </div>
         <div class="form-row">
+          <label>Google カレンダーID（LINE予約をAirbnbに同期）</label>
+          <input type="text" id="googleCalendarId" placeholder="xxxxx@group.calendar.google.com">
+          <small style="color:#666; display:block; margin-top:4px;">※Googleカレンダーの設定→カレンダーの統合→カレンダーIDをコピー</small>
+        </div>
+        <div class="form-row">
           <label>一泊単価（円）</label>
           <input type="number" id="nightlyRate" placeholder="15000">
         </div>
@@ -669,6 +674,7 @@
       const CONFIG_KEYS = [
         { key: 'driveFolderId', id: 'driveFolderId' },
         { key: 'airbnbIcalUrl', id: 'airbnbIcalUrl' },
+        { key: 'googleCalendarId', id: 'googleCalendarId' },
         { key: 'nightlyRate', id: 'nightlyRate' },
         { key: 'cleaningFee', id: 'cleaningFee' },
         { key: 'cleaningFeeWithPet', id: 'cleaningFeeWithPet' },
