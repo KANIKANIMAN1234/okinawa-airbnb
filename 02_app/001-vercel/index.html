@@ -507,7 +507,9 @@
           cancelBtn.style.whiteSpace = 'nowrap';
           cancelBtn.style.alignSelf = 'flex-start';
           cancelBtn.textContent = '予約をキャンセル';
-          cancelBtn.onclick = function() { cancelReservation(res.reservationId); };
+          cancelBtn.onclick = function() { 
+            cancelReservation(res.reservationId, res.checkIn, cancellationFee); 
+          };
           
           li.appendChild(infoDiv);
           li.appendChild(cancelBtn);
@@ -515,8 +517,10 @@
         });
       }
       
-      async function cancelReservation(reservationId) {
-        if (!confirm('本当にこの予約をキャンセルしますか？\nキャンセル料が発生する場合があります。')) {
+      async function cancelReservation(reservationId, checkIn, cancellationFee) {
+        const message = `本当にこの予約をキャンセルしますか？\n\nキャンセル料：¥${cancellationFee.toLocaleString()}円\n\n「OK」を押すとキャンセルされます。`;
+        
+        if (!confirm(message)) {
           return;
         }
         
@@ -529,7 +533,7 @@
           if (result && result.status === 'success') {
             const fee = result.result.cancellationFee || 0;
             const rate = (result.result.cancellationFeeRate || 0) * 100;
-            alert(`予約をキャンセルしました。\nキャンセル料: ${fee.toLocaleString()}円 (${rate}%)`);
+            alert(`予約をキャンセルしました。\n\nキャンセル料: ¥${fee.toLocaleString()}円 (${rate}%)`);
             await fetchMyReservations();
             await renderCalendar();
           } else {
