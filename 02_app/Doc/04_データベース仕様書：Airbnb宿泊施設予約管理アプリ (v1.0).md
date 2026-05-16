@@ -82,7 +82,7 @@
 | **checkInGuidePdfUrl** | チェックイン3日前に送るPDFのURL | `https://...` | 管理者のみ |
 | **doorVideoYoutubeUrl** | 玄関ドアの開け方動画（YouTube等）のURL | `https://...` | 管理者のみ |
 | **driveFolderId** | 月間売上 PDF を保存する Google Drive のフォルダID | `1RkQ9GF9teR76ufQ4lUvra2Nx90S3cR-Q` | **管理者のLINEでアクセスした時のみ設定可** |
-| **cleanerLineGroupId** | 清掃員用 LINE グループ／オープンチャットのグループID。予約確定時にここへ通知を送る | `Cxxxx...` | 管理者のみ |
+| **cleanerLineGroupId** | 清掃員用 LINE グループ／オープンチャットのグループID。予約確定時・予約キャンセル時にここへ通知を送る。それ以外（グループからメッセージやリッチメニューを送った場合）はボットは反応しない | `Cxxxx...` | 管理者のみ |
 | **adminLineUserId** | 管理者（井上）の LINE User ID。Vercel の管理者判定・通知送信先に使用 | `Uxxxx...` | 初回設定・要運用 |
 
 **templates シートで管理するメッセージ（管理者のみ編集）:**

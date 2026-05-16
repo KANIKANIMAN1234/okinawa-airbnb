@@ -75,10 +75,12 @@
 * **設定権限:** このフォルダID は **管理者の LINE でアクセスした時のみ** Vercel の管理者画面で設定・変更できる。ゲストには表示・編集させない。
 * **保存処理:** 月締め時（手動ボタンまたは時間駆動）に、GAS で `DriveApp.getFolderById(driveFolderId)` を実行し、生成した PDF を `createFile(blob)` で保存する。ファイル名は例として「月間売上_YYYY年MM月.pdf」。
 
-### 3.4 LINE グループ／オープンチャット（清掃員への予約確定通知）
-* **要件:** 予約確定時に、清掃員が参加している LINE オープンチャット（またはグループトーク）にも自動で予約確定の通知を送りたい。
+### 3.4 LINE グループ／オープンチャット（清掃員への予約確定・キャンセル通知）
+* **要件:** 予約確定時および予約キャンセル時に、清掃員が参加している LINE オープンチャット（またはグループトーク）へ自動で通知を送りたい。**清掃員グループからボットにメッセージやリッチメニューを送った場合は、ボットは反応しない**（問い合わせ保存・管理者通知・自動返信を行わない）。
 * **可否:** **可能**。LINE Messaging API の **Push Message** は、送信先（`to`）に **グループID** を指定できる。清掃員用のオープンチャット（またはグループ）に **公式アカウントのボットをメンバーとして追加**し、そのトークで何かメッセージがやり取りされた際に Webhook で届くイベントの `event.source.groupId` からグループID を取得する。この ID を config の `cleanerLineGroupId` に保存する。
 * **予約確定時:** confirmReservation 処理の一環で、管理者の LINE への通知に加え、`cleanerLineGroupId` が設定されていれば、同じ内容（または清掃向けの要約）を Push API の `to: cleanerLineGroupId` で送信する。
+* **予約キャンセル時:** cancelReservation 処理の一環で、`cleanerLineGroupId` が設定されていれば、該当期間のキャンセル旨・清掃不要の案内を Push API の `to: cleanerLineGroupId` で送信する。
+* **Webhook での扱い:** 受信イベントの `event.source.type === "group"` かつ `event.source.groupId === cleanerLineGroupId` の場合は、メッセージ・ポストバックいずれも処理せず return し、問い合わせ保存・返信を行わない。
 * **注意:** オープンチャットでグループID が取得・送信可能かは LINE の仕様に依存する。通常のグループトークでは利用可能。オープンチャットでもボットを追加したうえでグループID が取得できる場合に本機能を利用する。
 
 ### 3.5 Googleカレンダー連携（LINE予約のAirbnb自動同期）
@@ -145,7 +147,7 @@
 * **レスポンス:** `{ "status": "success", "result": { "nightlyRate": 15000, "cleaningFee": 10000 } }`
 
 ### 5.5 予約確定（confirmReservation）
-* **目的:** カレンダー画面で「宿泊を確定させる」押下時に、選択内容を送信し、空き確認のうえ予約を保存。ゲスト・管理者・清掃員グループに LINE 通知する。Googleカレンダーにも自動追加。
+* **目的:** カレンダー画面で「宿泊を確定させる」押下時に、選択内容を送信し、空き確認のうえ予約を保存。ゲスト・管理者・清掃員グループに LINE 通知（予約確定時）。予約キャンセル時も清掃員グループに通知。Googleカレンダーにも自動追加。
 * **リクエスト例:** `{ "action": "confirmReservation", "data": { "lineUserId": "Uxxxx", "displayName": "ゲスト名", "checkIn": "2025-05-01", "checkOut": "2025-05-03", "numberOfGuests": 2, "totalAmount": 40000 } }`
 * **レスポンス（成功）:** `{ "status": "success", "result": { "reservationId": "...", "lineNotifyGuest": true, "lineNotifyAdmin": true, "calendarAdded": true } }`
 * **レスポンス（失敗・例: 既に予約済みまたは予約禁止期間）:** `{ "status": "error", "message": "選択された期間は既に予約が入っているか、予約禁止期間です" }`
@@ -159,7 +161,7 @@
   - チェックイン日までの日数に応じてキャンセル料を計算（0%/50%/80%/100%）
   - 予約ステータスを「キャンセル」に更新、キャンセル料を備考欄に記録
   - Googleカレンダーから該当予約を削除
-  - ゲストと管理者にLINE通知
+  - ゲスト・管理者・**清掃員グループ**にLINE通知
 * **レスポンス（成功）:** `{ "status": "success", "result": { "cancellationFee": 20000 } }`
 * **レスポンス（失敗）:** `{ "status": "error", "message": "予約が見つかりません" }`
 

@@ -391,7 +391,14 @@ function apiCancelReservation(data) {
   // 清掃会社グループへ通知
   var cleanerGroupId = getConfigValue('cleanerLineGroupId');
   if (cleanerGroupId) {
-    var cleanerMsg = result.checkIn + '〜' + result.checkOut + ' の予約がキャンセルされました。清掃は不要です。';
+    var checkInDate = new Date(result.checkIn);
+    var checkOutDate = new Date(result.checkOut);
+    var formatDateForCleaner = function(d) {
+      return d.getFullYear() + '-' + 
+             (d.getMonth() + 1 < 10 ? '0' : '') + (d.getMonth() + 1) + '-' + 
+             (d.getDate() < 10 ? '0' : '') + d.getDate();
+    };
+    var cleanerMsg = formatDateForCleaner(checkInDate) + '〜' + formatDateForCleaner(checkOutDate) + ' の予約がキャンセルされました。清掃は不要です。';
     pushToGroup(cleanerGroupId, cleanerMsg);
   }
 

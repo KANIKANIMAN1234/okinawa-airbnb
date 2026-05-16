@@ -49,7 +49,7 @@
 | **ゴミ捨て方法** | リッチメニュー「ゴミ捨て方法」の文面。templates: `garbageDisposal` | |
 | **Airbnb iCal カレンダーURL** | 空き状況の取得元。config: `airbnbIcalUrl` | |
 | **GoogleカレンダーID** | LINE予約をAirbnbに同期するためのカレンダーID。config: `googleCalendarId` | |
-| **清掃員LINEグループID** | 予約確定時に通知を送るグループID。config: `cleanerLineGroupId` | |
+| **清掃員LINEグループID** | 予約確定時・予約キャンセル時に通知を送るグループID。それ以外はボットは反応しない。config: `cleanerLineGroupId` | |
 | **予約禁止期間設定** | 開始日・終了日・理由を入力して複数期間を追加。blocked_periods シートに保存 | LINEアプリ上でのみブロック（Googleカレンダー・Airbnbには影響しない） |
 
 各項目はテキスト入力または数値入力とし、保存ボタンで GAS の API（saveConfig / saveTemplate / saveBlockedPeriods）を呼び出して config / templates / blocked_periods に保存する。

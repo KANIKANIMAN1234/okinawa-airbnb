@@ -58,6 +58,15 @@ function handleLineWebhook(postData) {
 var RICH_MENU_TEXT_ACTIONS = ['facility_info', 'restaurant_guide', 'terms_of_use', 'menu_contact', 'access_info'];
 
 function handleMessageEvent(event) {
+  // 清掃会社グループからのメッセージには反応しない（予約確定・キャンセル時のみ通知する）
+  if (event.source && event.source.type === 'group') {
+    var groupId = event.source.groupId;
+    var cleanerGroupId = getConfigValue('cleanerLineGroupId');
+    if (cleanerGroupId && groupId === cleanerGroupId) {
+      return;
+    }
+  }
+
   var userId = event.source.userId;
   var text = (event.message && event.message.text) ? String(event.message.text).trim() : '';
 
@@ -133,6 +142,15 @@ function replyWithMenuAction(replyToken, data) {
 }
 
 function handlePostbackEvent(event) {
+  // 清掃会社グループからのポストバック（リッチメニュー等）には反応しない
+  if (event.source && event.source.type === 'group') {
+    var groupId = event.source.groupId;
+    var cleanerGroupId = getConfigValue('cleanerLineGroupId');
+    if (cleanerGroupId && groupId === cleanerGroupId) {
+      return;
+    }
+  }
+
   var data = event.postback ? event.postback.data : '';
   var replyToken = event.replyToken;
   if (!replyToken) return;
